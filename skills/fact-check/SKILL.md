@@ -1,28 +1,6 @@
 ---
 name: fact-check
-description: |
-  内容审校：事实核查、敏感词扫描、版权风险、风格一致性。给 reviewer subagent 用。
-  本 skill **不**做"硬性合规审查"（那是法务/合规团队的活），只做"内容生产时的快速自检"。
-triggers:
-  - reviewer subagent 必加载
-  - writer subagent 在事实敏感话题（如医疗/金融/法律）下必加载
-allowed-tools:
-  - read_file
-  - search_files
-  - web_search
-  - web_extract
-  - terminal
-inputs:
-  - name: draft
-    type: object
-    description: writer 产出的 draft 契约
-  - name: source_material
-    type: string
-    description: 原始原料（链接/草稿/数据）——fact-check 的对照基准
-  - name: checks
-    type: list[enum]
-    enum: [facts, sensitive_words, copyright, style]
-    default: [facts, sensitive_words, copyright]
+description: 内容审校：事实核查、敏感词扫描、版权风险、风格一致性。给 reviewer subagent 用。 本 skill **不**做"硬性合规审查"（那是法务/合规团队的活），只做"内容生产时的快速自检"。
 ---
 
 # fact-check —— 内容审校

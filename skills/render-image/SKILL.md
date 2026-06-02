@@ -1,29 +1,6 @@
 ---
 name: render-image
-description: |
-  HTML → PNG 渲染。给"小红书 9 宫格"和"公众号封面/配图"提供视觉资产。
-  本 skill 用 headless chrome 截图，**不依赖 html-anything 项目的任何代码**。
-triggers:
-  - renderer subagent 必加载
-  - 任何需要把 HTML 转成图片的 subagent 必加载
-allowed-tools:
-  - read_file
-  - write_file
-  - terminal
-inputs:
-  - name: html_path
-    type: string
-    description: 输入 HTML 文件路径（来自 render-html 的产物）
-  - name: output_path
-    type: string
-    description: 输出 PNG 路径
-  - name: viewport
-    type: object
-    description: { width, height } 默认 {1080, 1440}（小红书封面）
-  - name: full_page
-    type: boolean
-    default: true
-    description: 是否截整页（true = 适合长图）
+description: HTML → PNG 渲染。给"小红书 9 宫格"和"公众号封面/配图"提供视觉资产。 本 skill 用 headless chrome 截图，**不依赖 html-anything 项目的任何代码**。
 ---
 
 # render-image —— HTML → PNG 渲染

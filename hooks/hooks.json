@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'self-media-pipeline plugin loaded. Available commands: /quick-draft, /library-list. Available skills: self-media-pipeline, platform-wechat, platform-xiaohongshu, render-html, render-image, fact-check, library-mcp. Available subagents: writer, reviewer, renderer, platform-adapter. Read AGENTS.md for full overview.'"
+          }
+        ]
+      }
+    ]
+  }
+}

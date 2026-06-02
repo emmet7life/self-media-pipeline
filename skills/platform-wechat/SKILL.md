@@ -1,24 +1,6 @@
 ---
 name: platform-wechat
-description: |
-  微信公众号编辑器适配契约。回答"什么样的 HTML / 排版 / 配图 / 字数 才能直接粘贴到微信
-  公众号后台"。本 skill 被 writer subagent 在写公众号版本时加载；同时它的 constraints.json
-  被 reviewer subagent 在审校时用作硬约束自检。
-triggers:
-  - "公众号" / "微信" / "wechat" / "wx"
-  - 当 spec.yaml 的 target_platforms 含 "wechat" 时自动加载
-allowed-tools:
-  - read_file
-  - write_file
-  - terminal
-inputs:
-  - name: draft
-    type: object
-    description: writer 产出的 draft 契约（见 self-media-pipeline/SKILL.md Step 3）
-outputs:
-  - name: adapted_draft
-    type: object
-    description: 经平台适配后的 draft（HTML 已 inline、敏感词已替换、字数已对齐）
+description: 微信公众号编辑器适配契约。回答"什么样的 HTML / 排版 / 配图 / 字数 才能直接粘贴到微信 公众号后台"。本 skill 被 writer subagent 在写公众号版本时加载；同时它的 constraints.json 被 reviewer subagent 在审校时用作硬约束自检。
 ---
 
 # platform-wechat —— 微信公众号适配契约

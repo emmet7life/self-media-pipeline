@@ -1,16 +1,6 @@
 ---
 name: render-html
-description: |
-  通用 HTML 排版规范。提供"单文件、可邮件发送、可粘贴到公众号编辑器"的 HTML 输出能力。
-  本 skill 写"排版的为什么"（设计原则、可读性约束），不写"具体 HTML 怎么写"——后者由
-  platform-* skill 决定。
-triggers:
-  - writer subagent 写完原始 markdown 后必加载
-  - platform-adapter subagent 做最终 HTML 时必加载
-allowed-tools:
-  - read_file
-  - write_file
-  - terminal
+description: 通用 HTML 排版规范。提供"单文件、可邮件发送、可粘贴到公众号编辑器"的 HTML 输出能力。 本 skill 写"排版的为什么"（设计原则、可读性约束），不写"具体 HTML 怎么写"——后者由 platform-* skill 决定。
 ---
 
 # render-html —— 通用 HTML 排版规范

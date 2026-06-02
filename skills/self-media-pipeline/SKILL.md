@@ -1,48 +1,6 @@
 ---
 name: self-media-pipeline
-description: |
-  自媒体内容生产 pipeline 顶层工作流。用户在 Hermes TUI 里说"写一篇关于 X 的公众号/小红书"时
-  由 orchestrator 加载本 skill。本 skill 定义从原料到可发布产物的端到端步骤、subagent 调度、
-  产物在 library/ 的落盘契约、错误恢复策略。本 skill 本身**不直接产出内容**，而是**编排其他
-  subagent**（writer / reviewer / platform-adapter / renderer）。
-triggers:
-  - "写一篇...的公众号/小红书"
-  - "把...改写成公众号/小红书版本"
-  - "基于...生成一篇内容"
-  - "用 self-media-pipeline ..."
-allowed-tools:
-  - read_file
-  - write_file
-  - search_files
-  - terminal
-  - delegate_task    # spawn subagent
-inputs:
-  - name: topic
-    type: string
-    required: true
-    description: 内容主题或核心问题（一句话）
-  - name: target_platforms
-    type: list[enum]
-    enum: [wechat, xiaohongshu]
-    required: false
-    default: [wechat, xiaohongshu]
-    description: 目标平台；多选时并行起草
-  - name: source_material
-    type: string
-    required: false
-    description: 可选原料（链接 / 草稿 / 数据 / 关键词清单）
-  - name: style_reference
-    type: string
-    required: false
-    description: 可选风格参考（公司历史文章 ID / 风格描述）
-  - name: word_count_target
-    type: integer
-    required: false
-    description: 目标字数（公众号 600-1500；小红书正文不超 1000）
-outputs:
-  - name: derivative_ids
-    type: list[integer]
-    description: 写入 library/ 的 derivative 行 id（每个平台一个）
+description: 自媒体内容生产 pipeline 顶层工作流。用户在 Hermes TUI 里说"写一篇关于 X 的公众号/小红书"时 由 orchestrator 加载本 skill。本 skill 定义从原料到可发布产物的端到端步骤、subagent 调度、 产物在 library/ 的落盘契约、错误恢复策略。本 skill 本身**不直接产出内容**，而是**编排其他 subagent**（writer / reviewer / platform-adapter / renderer）。
 ---
 
 # self-media-pipeline

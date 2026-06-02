@@ -1,24 +1,6 @@
 ---
 name: platform-xiaohongshu
-description: |
-  小红书笔记适配契约。回答"什么样的图片矩阵 + 标题 + 正文 才能直接发布到小红书 App"。
-  本 skill 被 writer subagent 在写小红书版本时加载；同时它的 constraints.json 被 reviewer
-  subagent 在审校时用作硬约束自检。
-triggers:
-  - "小红书" / "xhs" / "Xiaohongshu" / "RED" / "种草"
-  - 当 spec.yaml 的 target_platforms 含 "xiaohongshu" 时自动加载
-allowed-tools:
-  - read_file
-  - write_file
-  - terminal
-inputs:
-  - name: draft
-    type: object
-    description: writer 产出的 draft 契约
-outputs:
-  - name: adapted_draft
-    type: object
-    description: 经平台适配后的 draft（含 9 宫格图片矩阵产物路径）
+description: 小红书笔记适配契约。回答"什么样的图片矩阵 + 标题 + 正文 才能直接发布到小红书 App"。 本 skill 被 writer subagent 在写小红书版本时加载；同时它的 constraints.json 被 reviewer subagent 在审校时用作硬约束自检。
 ---
 
 # platform-xiaohongshu —— 小红书笔记适配契约

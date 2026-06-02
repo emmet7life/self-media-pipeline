@@ -1,0 +1,32 @@
+name: self_media_pipeline
+version: 0.5.0
+description: "Agent-native 自媒体内容生产工作流。给定一段原料，自动生成微信公众号 + 小红书 + 其他平台的可发布产物。4 个 subagent（writer / reviewer / renderer / platform-adapter）协作，产物入 SQLite 内容库。"
+author: "self-media-pipeline owner"
+kind: skills-only
+platforms:
+  - linux
+  - macos
+  - windows
+provides_skills:
+  - self-media-pipeline   # 顶层 orchestrator skill
+  - platform-wechat
+  - platform-xiaohongshu
+  - render-html
+  - render-image
+  - fact-check
+  - library-mcp
+provides_subagents:
+  - writer
+  - reviewer
+  - renderer
+  - platform-adapter
+provides_tools:
+  - list-targets
+  - draft-spec
+  - run-pipeline
+  - db
+provides_commands:
+  - quick-draft
+  - library-list
+hooks:
+  - sessionStart

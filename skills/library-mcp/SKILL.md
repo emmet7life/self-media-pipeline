@@ -1,21 +1,6 @@
 ---
 name: library-mcp
-description: |
-  L1 内容库的 MCP server 描述。把 SQLite 内容库（articles / drafts / derivatives / publish_log）
-  暴露成 MCP 工具给 agent 调用。本 skill 描述**工具契约**和**MCP 配置**；实际 server 在
-  `library/server.py`。
-triggers:
-  - self-media-pipeline 的 Step 6（入库）必加载
-  - 任何"查询历史内容"、"列历史文章"、"搜主题"的用户输入命中
-allowed-tools:
-  - mcp_call
-inputs:
-  - name: operation
-    type: enum
-    enum: [insert_article, insert_draft, insert_derivative, list_articles, search_articles, get_article, get_draft, list_derivatives, log_publish]
-outputs:
-  - name: result
-    type: object
+description: L1 内容库的 MCP server 描述。把 SQLite 内容库（articles / drafts / derivatives / publish_log） 暴露成 MCP 工具给 agent 调用。本 skill 描述**工具契约**和**MCP 配置**；实际 server 在 `library/server.py`。
 ---
 
 # library-mcp —— 内容库 MCP 工具契约
