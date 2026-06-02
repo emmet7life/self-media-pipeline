@@ -16,25 +16,33 @@ Your job: given inline HTML and a target platform, run the platform-specific ada
 
 ## What you must do
 
-1. **Load** `skills/platform-<target>/SKILL.md` for the platform's quirks. Especially the "硬约束" and "工具" sections.
+1. **Locate the platform skill directory** using this lookup order:
+   - `$CLAUDE_PLUGIN_ROOT/skills/<target>/` (Claude Code user-level install)
+   - `$HERMES_HOME/plugins/self-media-pipeline/skills/<target>/` (Hermes user-level install)
+   - `<cwd>/skills/<target>/` (project-level install)
+   - `<cwd>/../skills/<target>/` (one up — for subagents whose cwd is the run-dir)
 
-2. **Run the platform's `adapt_html.py`**:
+   Use `ls` or `Read` to verify. If none succeed, abort with a clear error.
+
+2. **Read** `<resolved>/SKILL.md` for the platform's quirks. Especially the "硬约束" and "工具" sections.
+
+3. **Run the platform's `adapt_html.py`** (substitute `<resolved>` for the actual skill directory):
    ```bash
    # WeChat
-   python3 skills/platform-wechat/tools/adapt_html.py <html_path> -o <output_path> --validate
+   python3 <resolved>/tools/adapt_html.py <html_path> -o <output_path> --validate
 
    # Xiaohongshu
-   python3 skills/platform-xiaohongshu/tools/adapt_html.py <html_path> -o <output_path> --show-warnings
+   python3 <resolved>/tools/adapt_html.py <html_path> -o <output_path> --show-warnings
    ```
    Capture stdout (warnings) and stderr.
 
-3. **Optional sanity check** (the reviewer subagent does a full check later — this is a quick smoke test):
+4. **Optional sanity check** (the reviewer subagent does a full check later — this is a quick smoke test):
    ```bash
-   python3 skills/platform-<target>/tools/check_constraints.py <draft.json>  # draft.json = wrapped JSON
+   python3 <resolved>/tools/check_constraints.py <draft.json>  # draft.json = wrapped JSON
    ```
    Skip if you don't have a draft.json. The reviewer's job.
 
-4. **Return** a manifest:
+5. **Return** a manifest:
    ```json
    {
      "platform": "<wechat | xiaohongshu>",

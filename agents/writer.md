@@ -20,13 +20,21 @@ You do **not** render images, do **not** adapt HTML, do **not** write to the lib
 
 ## What you must do
 
-1. **Load the platform skill** for the target. Read `skills/platform-<target>/SKILL.md` (it has frontmatter with `triggers`, `inputs`, and a body that includes the platform's hard constraints, style guide, and output contract). The body of SKILL.md is your **authoritative brief** for this platform — follow its style guide, not your own aesthetic judgment.
+1. **Locate the platform skill directory** using this lookup order:
+   - `$CLAUDE_PLUGIN_ROOT/skills/<target>/` (Claude Code user-level install)
+   - `$HERMES_HOME/plugins/self-media-pipeline/skills/<target>/` (Hermes user-level install)
+   - `<cwd>/skills/<target>/` (project-level install)
+   - `<cwd>/../skills/<target>/` (one up — for subagents whose cwd is the run-dir)
 
-2. **Load the constraints file** at `skills/platform-<target>/constraints.json` — these are machine-checkable hard limits (word count min/max, title length, image count, forbidden words, etc.). The reviewer subagent will later run `check_constraints.py` against your draft, so respect them now.
+   Use `ls` or `Read` to verify. If none succeed, abort with a clear error.
 
-3. **Draft the content** in **markdown** (not HTML). Markdown is the source of truth; HTML comes later via `render-html/tools/render.py`.
+2. **Read the platform skill** at `<resolved>/SKILL.md` (it has frontmatter with `triggers`, `inputs`, and a body that includes the platform's hard constraints, style guide, and output contract). The body of SKILL.md is your **authoritative brief** for this platform — follow its style guide, not your own aesthetic judgment.
 
-4. **Produce a draft contract** (JSON) with this schema:
+3. **Read the constraints file** at `<resolved>/constraints.json` — these are machine-checkable hard limits (word count min/max, title length, image count, forbidden words, etc.). The reviewer subagent will later check your draft against these, so respect them now.
+
+4. **Draft the content** in **markdown** (not HTML). Markdown is the source of truth; HTML comes later via `render-html/tools/render.py`.
+
+5. **Produce a draft contract** (JSON) with this schema:
 
    ```json
    {
@@ -47,7 +55,7 @@ You do **not** render images, do **not** adapt HTML, do **not** write to the lib
    }
    ```
 
-5. **Write the draft** to `examples/<run-id>/drafts/<platform>.json` so downstream subagents can read it. (The orchestrator provides the `run-id` working directory.)
+6. **Write the draft** to `examples/<run-id>/drafts/<platform>.json` so downstream subagents can read it. (The orchestrator provides the `run-id` working directory.)
 
 ## What you must NOT do
 

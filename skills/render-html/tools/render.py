@@ -2,8 +2,11 @@
 """
 render.py —— 把 markdown 渲染成"inline HTML"（公众号可粘贴版）
 
-输入: markdown 文件路径 或 stdin
-输出: HTML 文件路径 或 stdout
+输入 (三种方式，按优先级):
+1. --from-draft <draft.json>  ← 推荐：draft 契约 JSON（含 body_markdown + title）
+2. input 位置参数            ← 纯 markdown 文件路径
+3. stdin                     ← 纯 markdown 文本
+输出: -o/--output 指定的文件，或 stdout
 
 做的事:
 1. markdown → HTML (markdown-it-py)
@@ -16,6 +19,11 @@ render.py —— 把 markdown 渲染成"inline HTML"（公众号可粘贴版）
 - 所有 style 都 inline
 - 移动优先（基准 375px）
 - 不调 LLM、不调外部 API
+
+注意: 不要把 draft JSON 文件当作 positional input 传入！
+- 错: render.py drafts/wechat.json   ← 会把整个 JSON 当 markdown 渲染
+- 对: render.py --from-draft drafts/wechat.json   ← 自动抽 body_markdown + title
+- 对: render.py article.md                          ← 纯 markdown 文件
 """
 import argparse
 import re
@@ -185,19 +193,58 @@ def render_markdown(md_text: str, title: str | None = None) -> str:
     return str(soup)
 
 
+def load_draft(path: str) -> tuple:
+    """
+    Load a draft contract JSON and extract (title, body_markdown).
+
+    Raises:
+        FileNotFoundError: file doesn't exist
+        json.JSONDecodeError: file is not valid JSON
+        KeyError: JSON missing required body_markdown field
+    """
+    import json
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    title = data.get("title")
+    body = data.get("body_markdown")
+    if body is None:
+        raise KeyError(
+            f"draft at {path} is missing required field 'body_markdown'. "
+            f"Got keys: {list(data.keys())}"
+        )
+    return title, body
+
+
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Render markdown to inline HTML")
-    ap.add_argument("input", nargs="?", help="input markdown file (default stdin)")
-    ap.add_argument("-o", "--output", help="output HTML file (default stdout)")
-    ap.add_argument("--title", help="article title (used in <title> tag)")
+    ap = argparse.ArgumentParser(
+        description="Render markdown to inline HTML. Use --from-draft to auto-extract from a draft JSON."
+    )
+    src = ap.add_mutually_exclusive_group()
+    src.add_argument(
+        "--from-draft",
+        metavar="DRAFT_JSON",
+        help="Load body_markdown + title from a draft contract JSON (RECOMMENDED for subagent use)",
+    )
+    src.add_argument(
+        "input",
+        nargs="?",
+        help="input markdown file (default: stdin). Do NOT pass a draft JSON here.",
+    )
+    ap.add_argument("-o", "--output", help="output HTML file (default: stdout)")
+    ap.add_argument("--title", help="article title (used in <title> tag). Overrides draft title if --from-draft is set.")
     args = ap.parse_args()
 
-    if args.input:
+    if args.from_draft:
+        draft_title, md_text = load_draft(args.from_draft)
+        # 优先用 CLI --title 覆盖 draft title
+        title = args.title or draft_title
+    elif args.input:
         md_text = Path(args.input).read_text(encoding="utf-8")
+        title = args.title
     else:
         md_text = sys.stdin.read()
+        title = args.title
 
-    html = render_markdown(md_text, title=args.title)
+    html = render_markdown(md_text, title=title)
 
     if args.output:
         Path(args.output).write_text(html, encoding="utf-8")

@@ -10,48 +10,62 @@ Your job: given an HTML file path and a target platform, invoke the right render
 
 ## Inputs
 
-- `html_path` (string, required): path to the platform-adapted HTML
+- `html_path` (string, required): path to the platform-adapted HTML (from `render-html` skill, post platform-adapter)
 - `target_platform` (one of: `wechat`, `xiaohongshu`, ...)
 - `output_dir` (string, required): where to write artifacts (usually `examples/<run-id>/renders/<platform>/`)
 - `image_specs` (array, optional): from the writer's draft, e.g. `[{slot: "cover", width: 1080, height: 1440}, ...]`
 
+**CRITICAL**: `html_path` must be a **rendered HTML file** (output of `render-html/tools/render.py`). Do NOT pass a draft JSON. If you only have a draft JSON, you must run `render.py --from-draft <draft.json>` first to produce HTML.
+
 ## What you must do
 
-1. **Load** `skills/render-image/SKILL.md` for the tool contract (CLI flags, viewport defaults, etc.).
+1. **Locate the render-image skill directory** using this lookup order:
+   - `$CLAUDE_PLUGIN_ROOT/skills/render-image/`
+   - `$HERMES_HOME/plugins/self-media-pipeline/skills/render-image/`
+   - `<cwd>/skills/render-image/`
+   - `<cwd>/../skills/render-image/`
 
-2. **For WeChat** (single cover, optional):
+   For Xiaohongshu, also locate `<resolved>/../platform-xiaohongshu/tools/slice_grid.py`.
+
+   Use `ls` or `Read` to verify. If none succeed, abort with a clear error.
+
+2. **Read** `<resolved>/SKILL.md` for the tool contract (CLI flags, viewport defaults, etc.).
+
+3. **Verify html_path is HTML, not JSON** — `head -c 200 <html_path>` should start with `<!DOCTYPE html>` or `<html`. If it looks like JSON (`{`), abort with clear error: "html_path appears to be a draft JSON, not rendered HTML. Run `render.py --from-draft <draft>` first."
+
+4. **For WeChat** (single cover, optional):
    ```bash
-   python3 skills/render-image/tools/render.py \
+   python3 <resolved>/tools/render.py \
        --html <html_path> \
        --png <output_dir>/cover.png \
        --viewport 1080x1440
    ```
    Produces `cover.png` at 1080×1440.
 
-3. **For Xiaohongshu** (9 宫格, required):
+5. **For Xiaohongshu** (9 宫格, required):
    - First render the full-page big image:
      ```bash
-     python3 skills/render-image/tools/render.py \
+     python3 <resolved>/tools/render.py \
          --html <html_path> \
          --png <output_dir>/cover-big.png \
          --viewport 1080x1440
      ```
    - Then slice into 3×3:
      ```bash
-     python3 skills/platform-xiaohongshu/tools/slice_grid.py \
+     python3 <resolved>/../platform-xiaohongshu/tools/slice_grid.py \
          --input <output_dir>/cover-big.png \
          --output-dir <output_dir>/grid/ \
          --rows 3 --cols 3
      ```
    - The slice tool produces `01.png` ... `09.png` (left-to-right, top-to-bottom) and a `contact-sheet.png` for self-inspection.
 
-4. **For each artifact**, capture:
+6. **For each artifact**, capture:
    - file path
    - file size in bytes
    - image dimensions (`width_px` × `height_px`) — verify with Pillow if you wrote the contact sheet
    - any tool warnings (e.g. resize for non-divisible input)
 
-5. **Return** a manifest:
+7. **Return** a manifest:
    ```json
    {
      "platform": "<wechat | xiaohongshu>",

@@ -39,8 +39,13 @@ Take a topic (or short brief) from the user, run the full self-media-pipeline en
 3. **Review**: for each draft, delegate to `reviewer` subagent:
    - spawn reviewer with task "review draft at <draft_path>, platform <platform>"
    - reviewer writes `examples/<timestamp>/reviews/<platform>.json` with pass/block/warn issues
-4. **Adapt**: for each passed draft, delegate to `platform-adapter`:
-   - spawn platform-adapter with task "adapt inline HTML at <render_html output> for <platform>"
+3.5. **Render markdown → HTML** (CRITICAL step — must happen BEFORE platform-adapter):
+   - for each passed draft, run `skills/render-html/tools/render.py --from-draft <draft_path> -o <run-dir>/article-<platform>.html`
+   - `--from-draft` flag auto-extracts `body_markdown` + `title` from the draft JSON
+   - **DO NOT** pass the draft JSON as a positional argument to `render.py` — that will render the JSON as markdown and produce garbage HTML
+   - See `skills/render-html/SKILL.md` for full contract
+4. **Adapt**: for each rendered HTML, delegate to `platform-adapter`:
+   - spawn platform-adapter with task "adapt HTML at <render_html output> for <platform>"
    - platform-adapter invokes `skills/platform-<platform>/tools/adapt_html.py` and returns the sanitized HTML
 5. **Render**: for each adapted HTML, delegate to `renderer`:
    - spawn renderer with task "render <html_path> for <platform>, output <output_dir>"

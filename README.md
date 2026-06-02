@@ -31,16 +31,58 @@ agent 会自动：
 
 ## 安装
 
-### Claude Code
+**两种模式**：user-level（全局可用，跨项目共享）/ project-level（仅本项目用，仓库自带）
+
+### User-level（推荐，全局可用）
+
+把 plugin 装到 `~/.claude/plugins/` 或 `~/.hermes/plugins/` 下，**所有项目都能用**：
+
+#### Claude Code
 ```bash
-# 在 plugin marketplace 列出后可安装
-claude plugin install self-media-pipeline
+# 方式 1：从 GitHub 装（发布版本）
+claude plugin install emmet7life/self-media-pipeline
+
+# 方式 2：从本地 checkout 装（开发中）
+git clone https://github.com/emmet7life/self-media-pipeline.git
+cd self-media-pipeline
+claude plugin install .
+
+# 验证
+ls ~/.claude/plugins/self-media-pipeline/
+# 应该看到 agents/ commands/ hooks/ skills/ tools/ .claude-plugin/
 ```
 
-### Hermes
+#### Hermes
 ```bash
 hermes plugins install ./self-media-pipeline
 ```
+
+### Project-level（仓库内自带 / 开发模式）
+
+**适合场景**：
+- 你在开发/修改这个 plugin
+- 你希望 plugin 跟项目代码一起 version control
+- 团队共享：每个开发者 clone 项目就有 plugin
+
+```bash
+# 1. 把整个仓库当作 plugin 根 clone
+git clone https://github.com/emmet7life/self-media-pipeline.git ~/media-publish-test/
+cd ~/media-publish-test/
+
+# 2. 仓库根目录就是 plugin 根，**不要**执行任何 mv / 改名操作
+#    - 仓库根已经有：.claude-plugin/ agents/ commands/ hooks/ skills/ tools/
+#    - 启动 Claude Code 即可加载
+claude --dangerously-skip-permissions
+# 3. 验证
+ls skills/ agents/ commands/ hooks/  # 都在
+```
+
+**常见错误**（**不要**做）：
+- ❌ `mv .claude-plugin .claude/` —— Claude Code 期望 `.claude-plugin/` 在 plugin 根，不是 `.claude/`
+- ❌ `mv skills/ .claude/skills/` —— plugin 根的内容应直接在根，**不**在 `.claude/` 下
+- ❌ 把仓库 clone 到 `~/projects/<name>/` 然后**只 cp 几个目录到 `.claude/`** —— 这会破坏 plugin 完整性
+
+**判断方式**：plugin 根必须有 `.claude-plugin/plugin.json` **和** `skills/` `agents/` `commands/` `hooks/` `tools/` 平级。
 
 ## 架构（一图流）
 

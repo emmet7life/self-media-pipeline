@@ -17,28 +17,42 @@ Your job: given a draft contract (from the writer subagent) and a target platfor
 
 ## What you must do
 
-1. **Load the platform skill** at `skills/platform-<target>/SKILL.md` — especially the "硬约束" section. The hard constraints live in `skills/platform-<target>/constraints.json`.
+1. **Locate the platform skill directory** using this lookup order:
+   - `$CLAUDE_PLUGIN_ROOT/skills/<target>/` (Claude Code user-level install)
+   - `$HERMES_HOME/plugins/self-media-pipeline/skills/<target>/` (Hermes user-level install)
+   - `<cwd>/skills/<target>/` (project-level install — try cwd first)
+   - `<cwd>/../skills/<target>/` (one up — for subagents whose cwd is the run-dir)
+   - `~/.<which-runtime>/plugins/self-media-pipeline/skills/<target>/` (last-resort user-level)
 
-2. **Run machine-checkable hard constraints**:
-   ```bash
-   python3 skills/platform-<target>/tools/check_constraints.py <draft_path>
-   ```
-   This returns a JSON report with `pass` / `block` / `warn` / `info` issues. Capture the report.
+   Use `ls` or `Read` to verify the directory exists and contains `SKILL.md` + `constraints.json` + `tools/`. If none of the lookups succeed, abort with `check_constraints.skill_not_found` block.
 
-3. **Run LLM-driven soft checks** (you, the reviewer, do these yourself):
+2. **Read** `skills/<target>/SKILL.md` and `skills/<target>/constraints.json` directly with the `Read` tool. Do NOT spawn a subprocess for this — your Read tool is path-agnostic and works regardless of cwd.
+
+3. **Run machine-checkable hard constraints YOURSELF** (not via subprocess). The check is a few simple rules from `constraints.json`:
+   - `body.min_chars` / `body.max_chars` (string length of `body_markdown`)
+   - `title.min_length` / `title.max_length`
+   - `title.must_contain_emoji` (boolean; check if title has any unicode emoji)
+   - `body.min_tags` (count `#hashtag` in body)
+   - `images.min_count` / `images.max_count` (count items in `images[]`)
+   - `tags_forbidden` (regex match in title or body)
+   - `word_count_min` / `word_count_max` (for `metadata.word_count`)
+
+   Optionally also run the script for cross-validation: `python3 <resolved-skill-dir>/tools/check_constraints.py <draft_path>`. This is preferred if you can locate the script — it gives you the script's own view. If the script fails or can't be found, do the check yourself in step 3 and report the result.
+
+4. **Run LLM-driven soft checks** (you, the reviewer, do these yourself):
    - **Fact-check**: if `source_material` is a URL, fetch it (use WebFetch). Compare key claims in the draft against the source. Flag factual errors as `block`.
    - **Sensitive words**: scan the body for political / medical / financial / copyright high-risk phrases. Flag as `block` (must-fix) or `warn` (judgment call).
    - **Style consistency**: if `style_reference` is given, extract its sentence length distribution / emoji frequency / terminology / paragraph structure, and compare against the draft. Deviation > 30% → `warn`.
    - **Platform hard-rules from SKILL.md body**: e.g. Xiaohongshu "标题必带 emoji" / "3+ 标签" — if the writer missed these, flag as `block`.
 
-4. **Combine** machine + LLM checks into a single review report. For each issue, specify:
+5. **Combine** machine + LLM checks into a single review report. For each issue, specify:
    - `constraint`: short identifier (e.g. `body.max_chars`, `fact_check.url_unreachable`)
    - `severity`: `block` (must fix) / `warn` (should fix) / `info` (FYI)
    - `message`: human-readable description
    - `location`: snippet or position in the draft
    - `fix_suggestion`: (for LLM-driven checks only) concrete text the writer could use
 
-5. **Write the report** to `examples/<run-id>/reviews/<platform>.json`.
+6. **Write the report** to `examples/<run-id>/reviews/<platform>.json`.
 
 ## Output schema
 
@@ -71,7 +85,9 @@ Your job: given a draft contract (from the writer subagent) and a target platfor
 
 ## Failure handling
 
-- **`check_constraints.py` script not found or errors out**: report the script error in the report (`severity: block`, `constraint: "check_constraints.runtime_error"`). Do not silently pass.
+- **None of the path lookups succeeded** (no plugin root env var, no project-level `skills/`): report `severity: block`, `constraint: "check_constraints.skill_not_found"`, `message: "Cannot locate platform skill at any standard path"`. Do not silently pass. Do not invent constraints.
+- **`check_constraints.py` script not found** (you can read constraints.json but not the script): do the check yourself in step 3 and proceed normally. Mark the run as `confidence: "medium"` to flag the cross-validation was skipped.
+- **`check_constraints.py` script found but errors out at runtime**: report the script error in the report (`severity: block`, `constraint: "check_constraints.runtime_error"`). Do not silently pass.
 - **Source URL unreachable**: set `confidence: "medium"`, add an `info` issue: "fact-check skipped: source_url_unreachable". Do not fail the draft on this alone.
 - **Style reference not in library**: set `confidence: "medium"`, skip style check, add `info` issue: "style_check skipped: reference not found".
 
