@@ -1,27 +1,28 @@
 #!/usr/bin/env python3
 """
-run-pipeline —— 手动触发一次端到端 pipeline（**调试用**）
+run-pipeline —— 端到端 pipeline runner（**week 3 实现版**）
 
-本工具是 self-media-pipeline 的"非 LLM 入口"，用来在没有 agent 的情况下
-手工跑一次 pipeline 验证工具链。
+把 spec.json 跑通完整 pipeline:
+  Step 1: 解析 spec
+  Step 2: fact-check（**STUB**——用 web_extract，第 5 周实现自动）
+  Step 3: writer（**STUB**——读 templates/draft-<platform>.md 当作 writer 产出）
+  Step 4: reviewer（**STUB**——只跑硬约束自检 check_constraints.py）
+  Step 5: renderer（**真**——调 render.py 渲染单图，调 render_grid.py 渲染 9 宫格）
+  Step 6: 调 library-mcp 入库
 
-真实场景下，orchestrator agent 会:
-    1. 加载 skills/self-media-pipeline/SKILL.md
-    2. spawn writer / reviewer / renderer subagent
-    3. 调 library-mcp 工具入库
-
-本工具只 step through 上述步骤的"骨架版"——主要验证:
-- spec.yaml 写得对
-- library CRUD 通
-- 路径契约对
-
-第 3 周后才会扩展。
+WEEK 5+ 真实化:
+- Step 2 接入 web_extract 自动核查
+- Step 3 替换为真 LLM writer subagent
+- Step 4 替换为真 LLM reviewer subagent
 
 用法:
     python tools/run-pipeline --spec examples/hello-world/spec.json
+    python tools/run-pipeline --spec spec.json --skip-render   # 不渲染图片
+    python tools/run-pipeline --spec spec.json --output-root examples/hello-world/scratch/output
 """
 import argparse
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -31,51 +32,237 @@ sys.path.insert(0, str(ROOT))
 
 import library.server as L  # noqa: E402
 
+# 模板：给每个平台一个 stub writer 产出（week 5 之前用）
+TEMPLATES_DIR = ROOT / "examples" / "hello-world" / "templates"
+
+
+def read_template(platform: str) -> dict:
+    """读 templates/draft-<platform>.json 当作 writer 产出"""
+    tpl_path = TEMPLATES_DIR / f"draft-{platform}.json"
+    if not tpl_path.exists():
+        raise FileNotFoundError(f"template not found: {tpl_path}")
+    return json.loads(tpl_path.read_text(encoding="utf-8"))
+
+
+def run_step(label: str, fn) -> None:
+    """helper: 跑一步并打印"""
+    print(f"[{label}]", end=" ", flush=True)
+    t0 = time.time()
+    result = fn()
+    dt = time.time() - t0
+    print(f"OK ({dt:.1f}s)")
+    return result
+
+
+def render_for_platform(html_path: Path, output_dir: Path, platform: str) -> dict:
+    """调用 render.py / render_grid.py 渲染图片"""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    artifacts = {}
+
+    if platform == "wechat":
+        # 单图（封面/可选配图）
+        png = output_dir / "cover.png"
+        subprocess.run(
+            ["python3", str(ROOT / "skills" / "render-image" / "tools" / "render.py"),
+             "--html", str(html_path), "--png", str(png), "--viewport", "1080x1440"],
+            check=True, capture_output=True,
+        )
+        artifacts["cover_png"] = png
+    elif platform == "xiaohongshu":
+        # 9 宫格：先生成 1 张大图，再切
+        big_png = output_dir / "cover-big.png"
+        subprocess.run(
+            ["python3", str(ROOT / "skills" / "render-image" / "tools" / "render.py"),
+             "--html", str(html_path), "--png", str(big_png), "--viewport", "1080x1440"],
+            check=True, capture_output=True,
+        )
+        artifacts["cover_big_png"] = big_png
+        # 切 9 宫格
+        grid_dir = output_dir / "grid"
+        subprocess.run(
+            ["python3", str(ROOT / "skills" / "platform-xiaohongshu" / "tools" / "slice_grid.py"),
+             "--input", str(big_png), "--output-dir", str(grid_dir), "--rows", "3", "--cols", "3"],
+            check=True, capture_output=True,
+        )
+        artifacts["grid_dir"] = grid_dir
+        artifacts["grid_pngs"] = sorted(p for p in grid_dir.glob("*.png") if not p.name.startswith("contact"))
+        artifacts["contact_sheet"] = grid_dir / "contact-sheet.png"
+    return artifacts
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--spec", required=True, help="path to spec.json")
-    ap.add_argument("--dry-run", action="store_true", help="don't write to library")
+    ap.add_argument("--skip-render", action="store_true", help="skip image rendering")
+    ap.add_argument("--output-root", help="where to put rendered artifacts (default scratch/)")
     args = ap.parse_args()
 
     spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
-    print(f"[step 1/6] parsed spec: {spec['topic']} -> {spec['target_platforms']}")
+    output_root = Path(args.output_root) if args.output_root else (ROOT / "examples" / "hello-world" / "scratch" / "output")
+    output_root.mkdir(parents=True, exist_ok=True)
 
+    # Step 1
+    print(f"[step 1/6] spec: topic={spec['topic']!r}, platforms={spec['target_platforms']}")
+
+    # Step 2 (stub)
     if spec.get("source_material"):
-        print(f"[step 2/6] fact-check SKIPPED in stub (no LLM call)")
+        print(f"[step 2/6] fact-check STUB (no LLM/web call; 第 5 周实现自动)")
 
-    drafts = []
+    # Step 3 + 4: for each platform, render draft → reviewer → renderer
+    article_id = None
+    derivative_ids = []
     for platform in spec["target_platforms"]:
-        print(f"[step 3/6] writer({platform}) STUB: no LLM call; would load skills/{platform or 'render-html'}")
-        drafts.append({"platform": platform, "status": "draft"})
+        print(f"\n=== platform: {platform} ===")
 
-    print(f"[step 4/6] reviewer STUB: no LLM call")
-    for d in drafts:
-        d["status"] = "reviewed"
+        # 3. writer stub
+        draft = read_template(platform)
+        print(f"[step 3/6] writer({platform}) STUB: 读 templates/draft-{platform}.json")
 
-    print(f"[step 5/6] renderer STUB: no chrome call")
+        # render markdown → inline HTML
+        tmp_dir = output_root / platform
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        inline_html_path = tmp_dir / "article.html"
+        # render.py 从 stdin 读 markdown
+        proc = subprocess.run(
+            ["python3", str(ROOT / "skills" / "render-html" / "tools" / "render.py"),
+             "--output", str(inline_html_path),
+             "--title", draft["title"]],
+            input=draft["body_markdown"],
+            capture_output=True, text=True,
+        )
+        if proc.returncode != 0:
+            print(f"   render.py FAILED (exit={proc.returncode}):")
+            print(f"   stderr: {proc.stderr}")
+            print(f"   stdout: {proc.stdout}")
+            raise RuntimeError(f"render.py failed for {platform}")
+        print(f"   rendered HTML: {inline_html_path} ({inline_html_path.stat().st_size} bytes)")
 
-    if args.dry_run:
-        print(f"[step 6/6] library insert SKIPPED (dry-run)")
-        return
+        # 平台适配
+        platform_html_path = tmp_dir / f"article-{platform}.html"
+        if platform == "wechat":
+            subprocess.run(
+                ["python3", str(ROOT / "skills" / "platform-wechat" / "tools" / "adapt_html.py"),
+                 str(inline_html_path), "-o", str(platform_html_path)],
+                check=True, capture_output=True, text=True,
+            )
+        elif platform == "xiaohongshu":
+            subprocess.run(
+                ["python3", str(ROOT / "skills" / "platform-xiaohongshu" / "tools" / "adapt_html.py"),
+                 str(inline_html_path), "-o", str(platform_html_path), "--show-warnings"],
+                check=True, capture_output=True, text=True,
+            )
+        print(f"   adapted HTML: {platform_html_path}")
 
-    aid = L.tool_insert_article({
-        "topic": spec["topic"],
-        "source_material": spec.get("source_material"),
-        "style_reference": spec.get("style_reference"),
-        "spec_yaml": json.dumps(spec, ensure_ascii=False),
-    })
-    print(f"[step 6/6] inserted article id={aid['article_id']}")
+        # 4. reviewer stub (just run hard constraints check)
+        check_report = tmp_dir / "check-report.json"
+        # check_constraints 期望 draft 文件路径，所以先写 tmp
+        draft_for_check = tmp_dir / "draft-for-check.json"
+        draft_for_check.write_text(json.dumps({
+            "title": draft["title"],
+            "body_markdown": draft["body_markdown"],
+            "inline_html": platform_html_path.read_text(encoding="utf-8"),
+            "images": draft.get("images", []),
+        }, ensure_ascii=False), encoding="utf-8")
+        rc = subprocess.run(
+            ["python3", str(ROOT / "skills" / f"platform-{platform}" / "tools" / "check_constraints.py"),
+             str(draft_for_check)],
+            capture_output=True, text=True,
+        )
+        # write report (even if non-zero exit)
+        check_report.write_text(rc.stdout, encoding="utf-8")
+        report_data = json.loads(rc.stdout) if rc.stdout.strip() else {"pass": False, "summary": {}}
+        verdict = "PASS" if report_data.get("pass") else "FAIL"
+        print(f"   reviewer STUB: {verdict} (block={report_data.get('summary', {}).get('block', 0)}, warn={report_data.get('summary', {}).get('warn', 0)}, info={report_data.get('summary', {}).get('info', 0)})")
 
-    for d in drafts:
+        # 5. renderer (real)
+        if not args.skip_render:
+            render_dir = tmp_dir / "render"
+            artifacts = render_for_platform(platform_html_path, render_dir, platform)
+            if platform == "wechat":
+                print(f"   rendered: {artifacts['cover_png']}")
+            elif platform == "xiaohongshu":
+                print(f"   rendered: 1 big + {len(artifacts.get('grid_pngs', []))} tiles + contact-sheet")
+
+        # 6. library inserts
+        if article_id is None:
+            aid = L.tool_insert_article({
+                "topic": spec["topic"],
+                "source_material": spec.get("source_material"),
+                "style_reference": spec.get("style_reference"),
+                "spec_yaml": json.dumps(spec, ensure_ascii=False),
+            })
+            article_id = aid["article_id"]
+            print(f"\n[step 6/6] inserted article id={article_id}")
+
         did = L.tool_insert_draft({
-            "article_id": aid["article_id"],
-            "platform": d["platform"],
-            "status": d["status"],
-            "title": f"[STUB] {spec['topic']} ({d['platform']})",
-            "body_markdown": f"# {spec['topic']}\n\nSTUB body for {d['platform']}.",
+            "article_id": article_id,
+            "platform": platform,
+            "status": "reviewed" if report_data.get("pass") else "needs_human",
+            "title": draft["title"],
+            "body_markdown": draft["body_markdown"],
+            "inline_html": platform_html_path.read_text(encoding="utf-8")[:8000],  # truncate for safety
+            "metadata_json": json.dumps({
+                "word_count": len(draft["body_markdown"]),
+                "image_count": len(draft.get("images", [])),
+            }, ensure_ascii=False),
         })
-        print(f"   - inserted draft id={did['draft_id']} platform={d['platform']}")
+        print(f"   inserted draft id={did['draft_id']} platform={platform} status={did.get('status', '?')}")
+
+        # 记录 derivative 文件
+        for f in [inline_html_path, platform_html_path, check_report]:
+            if f.exists():
+                size = f.stat().st_size
+                kind = "source_md" if f.suffix == ".md" else ("adapted_html" if "article-" in f.name else "preview_html")
+                if f.suffix == ".json":
+                    kind = "preview_html"  # check report 不入库，这里简化
+                    continue
+                dv = L.tool_insert_derivative({
+                    "draft_id": did["draft_id"],
+                    "kind": kind,
+                    "file_path": str(f.relative_to(ROOT)),
+                    "mime": "text/html",
+                    "size_bytes": size,
+                })
+                derivative_ids.append(dv["derivative_id"])
+
+        if not args.skip_render:
+            render_dir = tmp_dir / "render"
+            if platform == "wechat" and (render_dir / "cover.png").exists():
+                f = render_dir / "cover.png"
+                dv = L.tool_insert_derivative({
+                    "draft_id": did["draft_id"],
+                    "kind": "png_cover",
+                    "file_path": str(f.relative_to(ROOT)),
+                    "mime": "image/png",
+                    "size_bytes": f.stat().st_size,
+                })
+                derivative_ids.append(dv["derivative_id"])
+            elif platform == "xiaohongshu":
+                if (render_dir / "cover-big.png").exists():
+                    f = render_dir / "cover-big.png"
+                    dv = L.tool_insert_derivative({
+                        "draft_id": did["draft_id"],
+                        "kind": "png_cover",
+                        "file_path": str(f.relative_to(ROOT)),
+                        "mime": "image/png",
+                        "size_bytes": f.stat().st_size,
+                    })
+                    derivative_ids.append(dv["derivative_id"])
+                grid_dir = render_dir / "grid"
+                for i, gp in enumerate(sorted(grid_dir.glob("[0-9]*.png"))):
+                    dv = L.tool_insert_derivative({
+                        "draft_id": did["draft_id"],
+                        "kind": "png_grid",
+                        "file_path": str(gp.relative_to(ROOT)),
+                        "mime": "image/png",
+                        "size_bytes": gp.stat().st_size,
+                    })
+                    derivative_ids.append(dv["derivative_id"])
+
+    print(f"\n=== end-to-end OK ===")
+    print(f"  article_id: {article_id}")
+    print(f"  derivative_ids: {derivative_ids}")
+    print(f"  artifacts under: {output_root}")
 
 
 if __name__ == "__main__":

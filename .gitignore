@@ -21,6 +21,10 @@ dist/
 build/
 *.egg-info/
 
+# e2e scratch
+**/scratch/
+**/spec.json
+
 # local config
 .env
 .env.local

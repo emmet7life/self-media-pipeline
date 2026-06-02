@@ -38,7 +38,7 @@ platform-xiaohongshu/
 └── tools/
     ├── adapt_html.py        # 同公众号的 inline 适配（小红书图片外嵌 HTML 也要 inline）
     ├── check_constraints.py # 硬约束自检
-    └── slice_grid.py        # 9 宫格切图（核心工具）
+    └── slice_grid.py        # 9 宫格切图（核心工具，由 Codex 子任务实现）
 ```
 
 ## 硬约束（来自 constraints.json）

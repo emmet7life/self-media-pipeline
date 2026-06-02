@@ -27,12 +27,12 @@ TARGETS = [
         "skill_dir": "skills/platform-wechat",
         "constraints": "skills/platform-wechat/constraints.json",
         "status": "active",
-        "tools_implemented": [],
-        "tools_planned": [
+        "tools_implemented": [
             "skills/platform-wechat/tools/adapt_html.py",
             "skills/platform-wechat/tools/check_constraints.py",
         ],
-        "note": "骨架完成；adapt/check 工具第 3 周实现",
+        "tools_planned": [],
+        "note": "全部工具实现完成",
     },
     {
         "id": "xiaohongshu",
@@ -40,13 +40,13 @@ TARGETS = [
         "skill_dir": "skills/platform-xiaohongshu",
         "constraints": "skills/platform-xiaohongshu/constraints.json",
         "status": "active",
-        "tools_implemented": [],
-        "tools_planned": [
+        "tools_implemented": [
             "skills/platform-xiaohongshu/tools/adapt_html.py",
             "skills/platform-xiaohongshu/tools/check_constraints.py",
             "skills/platform-xiaohongshu/tools/slice_grid.py",
         ],
-        "note": "骨架完成；9 宫格切图第 3 周实现",
+        "tools_planned": [],
+        "note": "全部工具实现完成（slice_grid.py 由 Codex 子任务实现）",
     },
     {
         "id": "zhihu",
