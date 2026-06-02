@@ -1,0 +1,17 @@
+{
+  "title": "AI Agent 入门：别再把 Agent 当成聊天框",
+  "body_markdown": "# AI Agent 入门：别再把 Agent 当成聊天框\n\n**你的代码能自己调用 API、自主决策、多步规划——这才是 Agent。**\n\n很多人以为 Agent 就是「更聪明的 ChatGPT」。加个记忆，加个工具，好像就 Agent 了。\n\n不对。\n\nAgent 不是「更聪明的 chat」。Agent 是一个**可执行的工作流节点**——它能读规则、调工具、做决策、留下可追溯的产物。\n\n今天这篇文章，带你从零搭一个真正的 Agent，不讲虚的，全是代码。\n\n## 什么是 Agent——三个要素\n\nAgent 不是新概念。它的核心就三个东西：\n\n- **规划**：把一个大任务拆成几步，决定每步做什么\n- **记忆**：记住前面做了啥，别反复问同一个问题\n- **工具调用**：能调 API、写文件、查数据库\n\n这三个要素缺一不可。没有规划，LLM 就是一个高级聊天框。没有记忆，每轮对话都是「初次见面」。没有工具，它只能动嘴不能动手。\n\n**关键区别**：Chat 是「你问一句它答一句」。Agent 是「你给一个目标，它自己拆解、执行、返回结果」。\n\n## 第一步：选模型\n\n选模型就是选「大脑」。目前主流选择：\n\n- **GPT-5 / Claude 4.5**：闭源旗舰，能力最强，适合复杂任务\n- **DeepSeek-V3 / Qwen3-Max**：开源替代，本地可部署\n- **GPT-5.4-mini / Claude Haiku**：轻量版，适合简单工具链\n\n怎么选？如果 Agent 要做复杂推理（写代码、多步思考），选旗舰。如果只是调 API + 转发，轻量版就够了。\n\n## 第二步：选框架\n\n框架决定了你怎么定义工具、怎么管理对话历史。\n\n| 框架 | 适合场景 | 特点 |\n|---|---|---|\n| LangChain | 全功能通用 | 生态最全，但抽象层太多 |\n| AutoGen | 多 Agent 协作 | 微软出品，多个 Agent 互相聊天 |\n| CrewAI | 角色化编排 | 给每个 Agent 一个「人设」 |\n| Vercel AI SDK | 前端开发者 | 和 Next.js 深度集成 |\n\n新手推荐从 **LangChain** 开始——资料最多、踩坑的人最多、踩过的坑也最多。\n\n## 第三步：定义工具\n\n工具就是 Agent 的「手」。一个工具是一个函数，有名字、有描述、有参数签名。\n\n看一个实际的例子：\n\n```python\n@tool\ndef search_knowledge_base(query: str) -> str:\n    \"\"\"搜索内部知识库，查询指定的技术文档或 FAQ\"\"\"\n    results = vector_db.search(query, top_k=3)\n    return \"\\n---\\n\".join(results)\n```\n\n这里的关键是**描述**——LLM 靠描述来决定什么时候调这个工具。写得太抽象，它不知道怎么用；写得太长，它会忽略。\n\n**最佳实践**：每个工具的描述包含三要素：何时用、参数是什么、返回什么。\n\n## 第四步：串联起来\n\n一个完整的 Agent 工作流就像生产线：\n\n1. 接收用户输入\n2. LLM 决定要不要调工具，调哪个\n3. 执行工具，把结果塞回给 LLM\n4. LLM 根据结果决定下一步：调下一个工具？还是输出最终答案？\n5. 重复直到任务完成\n\n这个循环就是 **ReAct（Reasoning + Acting）**。\n\n```\n输入 → 思考 → 行动 → 观察 → 思考 → 行动 → ... → 输出\n```\n\n## 常见坑\n\n- **工具描述太抽象**：LLM 不知道何时该调，写清「何时用、用什么参数」\n- **没有 fallback**：工具调用失败要优雅降级，而不是崩溃\n- **上下文太长**：超过 100k token 后会丢早期信息，要加 summarization\n- **工具太多**：一次给 Agent 20 个工具，它大概率选错。控制 <= 10 个\n\n## 总结\n\nAgent 不是更聪明的 chat。Agent 是**可执行的流程节点**。\n\n入门路径很简单：选 LLM → 选框架 → 写工具描述 → 跑通第一个 ReAct 循环。\n\n不要追求复杂。先让 Agent 做对一件事，再做更多。\n\n> 推荐进一步阅读：[Lilian Weng 的 Agent 综述](https://lilianweng.github.io/posts/2023-06-23-agent/)，也可以在我们公众号后台留言「Agent 入门」获取 Cheat Sheet。\n",
+  "images": [
+    {
+      "slot": "cover",
+      "width_px": 1080,
+      "height_px": 1440,
+      "prompt": "A minimalist abstract illustration showing an AI agent workflow: multiple connected nodes with arrows forming a pipeline, warm color palette of deep blue and coral, clean modern style"
+    }
+  ],
+  "metadata": {
+    "template_id": "wechat-magazine-editorial",
+    "word_count": 1350,
+    "reading_time_min": 5
+  }
+}

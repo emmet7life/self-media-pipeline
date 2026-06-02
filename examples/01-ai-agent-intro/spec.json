@@ -1,0 +1,12 @@
+{
+  "topic": "AI Agent 入门——给普通开发者的第一课",
+  "target_platforms": ["wechat", "xiaohongshu"],
+  "source_material": null,
+  "style_reference": null,
+  "word_count_target": null,
+  "constraints": {
+    "wechat": {"max_chars": 5000, "inline_css_only": true},
+    "xiaohongshu": {"max_chars": 1000, "grid": "3x3", "cover_size": "1080x1440"}
+  },
+  "created_at": "2026-06-02T15:00:00Z"
+}

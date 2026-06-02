@@ -1,0 +1,48 @@
+{
+  "pass": true,
+  "issues": [
+    {
+      "constraint": "body.paragraph_max_lines",
+      "severity": "warn",
+      "message": "第 10 段（避坑指南）有 4 行，超过 3 行限制",
+      "location": "避坑指南段落",
+      "fix_suggestion": "可拆成两段：❌ 部分和 ✅ 部分各一段"
+    },
+    {
+      "constraint": "style_guide.followed",
+      "severity": "info",
+      "message": "风格检查通过：第一人称闺蜜聊天风、emoji 节奏、开头钩子、阅读时长 1 分钟",
+      "location": "title + body_markdown"
+    },
+    {
+      "constraint": "title.emoji",
+      "severity": "info",
+      "message": "标题含 emoji（🔥），满足小红书标题风格要求",
+      "location": "title"
+    },
+    {
+      "constraint": "body.hashtags",
+      "severity": "info",
+      "message": "5 个话题标签（#AI #AI编程 #教程 #学习笔记 #效率工具），≥3 要求满足",
+      "location": "body_markdown 末尾"
+    },
+    {
+      "constraint": "sensitive_words.scan",
+      "severity": "info",
+      "message": "敏感词扫描通过，无外链/微信号/二维码/违禁词",
+      "location": "body_markdown"
+    },
+    {
+      "constraint": "images.pacing",
+      "severity": "info",
+      "message": "5 张图配 480 字正文，比例合理（推荐 4-6 张）",
+      "location": "images"
+    }
+  ],
+  "summary": {
+    "block": 0,
+    "warn": 1,
+    "info": 5
+  },
+  "confidence": "high"
+}

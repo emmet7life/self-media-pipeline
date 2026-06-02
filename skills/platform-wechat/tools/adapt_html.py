@@ -1,87 +1,85 @@
 #!/usr/bin/env python3
 """
-adapt_html.py —— 微信公众号编辑器适配器
+adapt_html.py —— 微信公众号编辑器适配器 (stdlib only, regex based)
 
-输入: HTML 字符串（或文件路径）
-输出: 适配后的 HTML（可粘贴到公众号后台）
-
-做的事:
-1. 移除 <script>、外部 <link rel=stylesheet>、外部字体引用
-2. 替换 <img data-wx-src="..."> 占位为 <img src="...">
-3. 包裹一层 <section data-tool="html-anything"> 让微信信任
-4. 强制所有 <table> 添加 border 属性（微信会剥 CSS border）
-
-输入来源：一般是 skills/render-html/tools/render.py 的输出
+Simple regex transformations for WeChat editor compatibility.
+Much simpler and more robust than a full HTML parser for these specific ops.
 """
 import argparse
+import re
 import sys
 from pathlib import Path
 
-from bs4 import BeautifulSoup
-
 
 def adapt_for_wechat(html: str) -> str:
-    soup = BeautifulSoup(html, "html.parser")
+    """Adapt HTML for WeChat editor using regex transformations."""
 
-    # 1. 移除 script
-    for tag in soup.find_all("script"):
-        tag.decompose()
+    # 1. Remove <script>...</script> (non-greedy, multiline)
+    html = re.sub(r'<script\b[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
-    # 2. 移除外部 stylesheet 链接
-    for link in soup.find_all("link", attrs={"rel": "stylesheet"}):
-        link.decompose()
+    # 2. Remove <link rel="stylesheet" ...>
+    html = re.sub(
+        r'<link\b[^>]*?\brel\s*=\s*["\']stylesheet["\'][^>]*/?>',
+        '', html, flags=re.IGNORECASE
+    )
 
-    # 3. 移除 @import / @font-face（已经 inline 完就不会有，但防御性删除）
-    for style in soup.find_all("style"):
-        if style.string and ("@import" in style.string or "@font-face" in style.string):
-            style.decompose()
+    # 3. Remove <style>...</style> (already inlined, so safe to strip)
+    html = re.sub(r'<style\b[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
-    # 4. <img data-wx-src="..." data-slot="..."> → <img src="...">
-    for img in soup.find_all("img"):
-        wx_src = img.get("data-wx-src")
-        slot = img.get("data-slot")
-        if wx_src:
-            img["src"] = wx_src
-        if slot:
-            img["data-slot"] = slot  # 保留标记，供后续处理
+    # 4. <img data-wx-src="..."> -> <img src="...">
+    def fix_img(m):
+        before = m.group(1)
+        attrs = m.group(2)
+        after = m.group(3) if m.group(3) else ''
+        # Rewrite data-wx-src to src
+        attrs = re.sub(r'\bdata-wx-src\s*=', 'src=', attrs)
+        return f'<img{before}{attrs}{after}'
+    html = re.sub(
+        r'<img(\s+)((?:[^>]*?data-wx-src[^>]*?)?)(\s*/?\s*>)?',
+        fix_img, html, flags=re.IGNORECASE
+    )
 
-    # 5. 表格加 border 属性（微信会剥 CSS border）
-    for table in soup.find_all("table"):
-        table["border"] = "1"
-        table["cellspacing"] = "0"
-        table["cellpadding"] = "8"
+    # 5. <body> content wrapper: wrap entire body content in <section data-tool="html-anything">
+    def wrap_body(m):
+        before = m.group(1)  # <body ...>
+        content = m.group(2)  # everything inside body
+        after = m.group(3)    # </body>
+        return f'{before}<section data-tool="html-anything">{content}</section>{after}'
+    html = re.sub(
+        r'(<body\b[^>]*>)(.*?)(</body>)',
+        wrap_body, html, flags=re.DOTALL | re.IGNORECASE
+    )
 
-    # 6. 包一层 <section data-tool="html-anything"> 让微信识别为可信内容块
-    body = soup.find("body")
-    if body:
-        wrapper = soup.new_tag("section", attrs={"data-tool": "html-anything"})
-        # 把 body 的内容搬到 wrapper
-        for child in list(body.children):
-            wrapper.append(child.extract() if hasattr(child, 'extract') else child)
-        body.append(wrapper)
+    # 6. Tables: add border/cellspacing/cellpadding if missing
+    def fix_table(m):
+        tag = m.group(1)  # <table ...> or <table>
+        if 'border' not in tag:
+            tag = tag.rstrip('>') + ' border="1" cellspacing="0" cellpadding="8">'
+        return tag
+    html = re.sub(r'<table\b([^>]*)>', fix_table, html, flags=re.IGNORECASE)
 
-    return str(soup)
+    return html
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Adapt HTML for WeChat editor")
     ap.add_argument("input", nargs="?", help="input HTML file (default stdin)")
     ap.add_argument("-o", "--output", help="output HTML file (default stdout)")
-    ap.add_argument("--validate", action="store_true", help="run basic validation (forbidden tags etc.)")
+    ap.add_argument("--validate", action="store_true", help="run basic validation")
     args = ap.parse_args()
 
     if args.input:
-        html = Path(args.input).read_text(encoding="utf-8")
+        html_str = Path(args.input).read_text(encoding="utf-8")
     else:
-        html = sys.stdin.read()
+        html_str = sys.stdin.read()
 
-    adapted = adapt_for_wechat(html)
+    adapted = adapt_for_wechat(html_str)
 
     if args.validate:
-        # 简单校验：确认 <script> / <link rel=stylesheet> 已清干净
-        if "<script" in adapted.lower():
+        cleaned = adapted.lower()
+        if re.search(r'<script[>\s]', cleaned):
             print("WARN: <script> still present", file=sys.stderr)
-        if "<link" in adapted.lower() and 'rel="stylesheet"' in adapted.lower():
+        if re.search(r'<link\b[^>]*rel\s*=\s*["\']stylesheet["\']', cleaned):
             print("WARN: <link rel=stylesheet> still present", file=sys.stderr)
 
     if args.output:

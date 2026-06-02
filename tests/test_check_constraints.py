@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 """
+
 test_check_constraints.py —— 锁住 check_constraints.py 的硬约束检查行为
 
 P0-B 复发点: 之前 reviewer subagent 找不到 skills/platform-xiaohongshu/ 报 block.

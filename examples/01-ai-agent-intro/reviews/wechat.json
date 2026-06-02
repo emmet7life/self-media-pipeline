@@ -1,0 +1,50 @@
+{
+  "pass": true,
+  "issues": [
+    {
+      "constraint": "word_count.recommended_range",
+      "severity": "info",
+      "message": "正文 1982 字略超推荐上限 1500，但在硬约束 5000 以内，可接受",
+      "location": "body_markdown",
+      "fix_suggestion": "无必要——1982 字属于公众号中篇，读者注意力仍在"
+    },
+    {
+      "constraint": "word_count.paragraph_max_lines",
+      "severity": "warn",
+      "message": "第 18 段（表格）和第 23 段（代码块）超出 5 行限制",
+      "location": "Paragraph 18 (table), Paragraph 23 (code block)",
+      "fix_suggestion": "表格和代码块可保留，属于结构性内容"
+    },
+    {
+      "constraint": "structure.image_density_too_low",
+      "severity": "warn",
+      "message": "1982 字仅 1 张配图，建议在「选模型」和「选框架」之间各加一张",
+      "location": "images",
+      "fix_suggestion": "在「选框架」表格后和「常见坑」前各加一张 inline 配图提示"
+    },
+    {
+      "constraint": "style_guide.followed",
+      "severity": "info",
+      "message": "风格检查通过：第二人称、短句、关键句加粗、开头钩子直接抛痛点、结尾行动召唤",
+      "location": "body_markdown"
+    },
+    {
+      "constraint": "fact_check.no_external_claims",
+      "severity": "info",
+      "message": "内容为通用 AI Agent 知识，无非标事实需核查",
+      "location": "body_markdown"
+    },
+    {
+      "constraint": "sensitive_words.scan",
+      "severity": "info",
+      "message": "敏感词扫描通过，无政治/医疗/金融/版权违规内容",
+      "location": "body_markdown"
+    }
+  ],
+  "summary": {
+    "block": 0,
+    "warn": 2,
+    "info": 3
+  },
+  "confidence": "high"
+}

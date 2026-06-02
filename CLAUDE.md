@@ -64,9 +64,12 @@ writer 不审校，reviewer 不写作，platform-adapter 不渲染，renderer �
 | `hooks/` | ✓ sessionStart 提示 |
 | `tools/` (5) | ✓ list-targets / list-templates / draft-spec / run-pipeline / db |
 | `library/` | ✓ SQLite + MCP server（7 个工具，自动按 schema 初始化） |
-| e2e pipeline | ✓ hello-world 工具层跑通；小红书逐卡片 HTML→PNG（writer/reviewer/fact-check 仍是 stub） |
-| 单元测试 | ✓ 37 个 |
-| 真实 LLM 起草 | ❌ writer subagent 定义写好但需要 Claude Code/Codex subagent e2e 验证（用父 agent 的 model: inherit） |
+| e2e pipeline | ✓ --real-llm 模式端到端跑通：真实 LLM 起草 + 审校 + 渲染 + 入库 |
+| 单元测试 | ✓ 11 个 check_constraints 测试通过（render/db 测试待适配新 stdlib 工具） |
+| 真实 LLM 起草 | ✓ 已通过 Codex 端到端验证（writer subagent 作为 orchestrator 内联执行） |
+| 真实 LLM 审校 | ✓ reviewer subagent 同时跑通（硬约束检查 + LLM 内容审查 + 敏感词扫描） |
+| 工具零外部依赖 | ✓ 所有 tools/*.py 使用纯 stdlib（移除 markdown-it-py + beautifulsoup4 依赖） |
+| PNG 截图 | ❌ 需要 playwright + chromium，HTML 产物完整可用 |
 
 详见 `docs/ADR-001-agent-native-architecture.md`。
 

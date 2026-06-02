@@ -1,0 +1,15 @@
+{
+  "draft": "examples/01-ai-agent-intro/drafts/xiaohongshu.json",
+  "count": 5,
+  "card_html": [
+    "examples/01-ai-agent-intro/renders/xiaohongshu-cards/01.html",
+    "examples/01-ai-agent-intro/renders/xiaohongshu-cards/02.html",
+    "examples/01-ai-agent-intro/renders/xiaohongshu-cards/03.html",
+    "examples/01-ai-agent-intro/renders/xiaohongshu-cards/04.html",
+    "examples/01-ai-agent-intro/renders/xiaohongshu-cards/05.html"
+  ],
+  "size": {
+    "width_px": 1080,
+    "height_px": 1440
+  }
+}

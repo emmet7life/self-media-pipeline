@@ -190,9 +190,12 @@ cd ~/self-media-pipeline
 | `hooks/` | ✓ |
 | `tools/` (5) | ✓ |
 | `library/` (SQLite + MCP) | ✓ 自动按 `schema.sql` 初始化 |
-| e2e 端到端（hello-world） | ✓ 工具层跑通；小红书改为逐卡片 HTML→PNG；writer/reviewer/fact-check 仍是 stub |
-| 单元测试 | ✓ 37 个 |
-| 真实 LLM 起草（writer subagent 用 `model: inherit`） | ❌ 待 Claude Code/Codex subagent e2e 验证 |
+| e2e 端到端 | ✓ --real-llm 模式跑通（真实 LLM 起草 + 审校 + 渲染 + 入库） |
+| 单元测试 | ✓ 11 个 check_constraints 测试通过（render/db 测试待适配新 stdlib 工具） |
+| 真实 LLM 起草（writer subagent） | ✓ 已通过 Codex 端到端验证 |
+| 真实 LLM 审校（reviewer subagent） | ✓ 硬约束检查 + LLM 内容审查 + 敏感词扫描 |
+| 工具零外部依赖 | ✓ 所有 tools/*.py 纯 stdlib（移除 markdown-it-py + beautifulsoup4 依赖） |
+| PNG 截图 | ❌ 需要 playwright + chromium |
 | 微信 API 直接发布 | ❌ 第 9+ 周 |
 | GUI / web 入口 | ❌ 第 9+ 周 |
 

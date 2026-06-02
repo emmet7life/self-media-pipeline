@@ -1,0 +1,41 @@
+{
+  "title": "AI Agent 入门🔥3 步上手教程",
+  "body_markdown": "姐妹们！！今天分享一个超实用的 AI Agent 入门教程✨\n\n不是普通的聊天机器人，是**能自己干活的那种**——查资料、写代码、调 API，全程不用你盯着 💻\n\n## 第一步：选对大脑 🧠\n\nGPT-5 或 Claude 都行，新手推荐 GPT-5 最省心。\n开源党选 DeepSeek-V3，本地部署很香。\n\n## 第二步：装个框架 🛠️\n\nLangChain 最主流，教程最多踩坑也有答案。\nAutoGen 适合多 Agent 互聊。\nCrewAI 每个 Agent 一个角色。\n\n## 第三步：写工具说明书 📝\n\n工具就是给 Agent 的说明书——说明能调什么、怎么调。\n关键：**描述要写清楚**，LLM 靠这个决定何时调。\n\n## 避坑指南 ⚠️\n\n❌ 一次给 20 个工具→ 选错\n✅ 控制 ≤ 10 个\n❌ 工具描述太抽象 → 不知道怎么用\n✅ 写清何时用、参数、返回值\n\n## 一句话总结 💡\n\nAgent = LLM + 规划 + 工具 + 记忆\n上手比你想的简单，今天就能跑起来！\n\n#AI #AI编程 #教程 #学习笔记 #效率工具",
+  "images": [
+    {
+      "slot": "cover",
+      "width_px": 1080,
+      "height_px": 1440,
+      "prompt": "A warm pastel-toned card with title 'AI Agent 入门🔥' and a cute robot illustration, soft pink and orange gradient background"
+    },
+    {
+      "slot": "card-1",
+      "width_px": 1080,
+      "height_px": 1440,
+      "prompt": "Pastel card showing brain icon with '选对大脑' title, GPT-5 and DeepSeek logos as comparison, warm yellow-cream background"
+    },
+    {
+      "slot": "card-2",
+      "width_px": 1080,
+      "height_px": 1440,
+      "prompt": "Pastel card with toolbox icon, '装个框架 🛠️' title, showing LangChain, AutoGen, CrewAI as three options, soft mint green background"
+    },
+    {
+      "slot": "card-3",
+      "width_px": 1080,
+      "height_px": 1440,
+      "prompt": "Pastel card with document icon, '写工具说明书 📝' title, showing example Python tool code snippet with @tool decorator, soft lavender background"
+    },
+    {
+      "slot": "card-4",
+      "width_px": 1080,
+      "height_px": 1440,
+      "prompt": "Pastel card with warning icon, '避坑指南 ⚠️' title, red X marks next to common mistakes, green checkmarks next to solutions, soft peach background"
+    }
+  ],
+  "metadata": {
+    "template_id": "xhs-pastel-card-deck",
+    "word_count": 420,
+    "reading_time_min": 1
+  }
+}

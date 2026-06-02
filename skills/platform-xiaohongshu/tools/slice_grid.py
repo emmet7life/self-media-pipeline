@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 slice_grid.py —— 小红书 9 宫格切图工具（核心工具）
 

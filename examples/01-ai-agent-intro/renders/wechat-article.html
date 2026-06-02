@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agent 入门：别再把 Agent 当成聊天框</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; color: #333; line-height: 1.7; max-width: 100%; padding: 16px; margin: 0; background: #fff; }
+h1 { font-size: 1.875em; font-weight: 700; margin: 1.2em 0 0.6em; line-height: 1.3; }
+h2 { font-size: 1.5em; font-weight: 700; margin: 1.2em 0 0.5em; line-height: 1.3; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+h3 { font-size: 1.25em; font-weight: 600; margin: 1.1em 0 0.5em; }
+p { margin: 0.8em 0; font-size: 16px; }
+a { color: #0066cc; text-decoration: none; }
+strong { font-weight: 700; }
+em { font-style: italic; }
+ul, ol { margin: 0.8em 0; padding-left: 1.5em; }
+li { margin: 0.3em 0; }
+blockquote { border-left: 4px solid #ddd; background: #f9f9f9; margin: 1em 0; padding: 0.8em 1em; color: #555; }
+code { background: #f4f4f4; padding: 0.15em 0.35em; border-radius: 3px; font-family: "SF Mono", Consolas, monospace; font-size: 0.9em; color: #c7254e; }
+pre { background: #2d2d2d; color: #f8f8f2; padding: 1em; border-radius: 6px; overflow-x: auto; line-height: 1.5; margin: 1em 0; }
+pre code { background: transparent; padding: 0; color: inherit; font-size: 0.875em; }
+img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #ddd; padding: 0.5em 0.8em; text-align: left; }
+th { background: #f5f5f5; font-weight: 600; }
+hr { border: none; border-top: 1px solid #eee; margin: 1.5em 0; }
+</style>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; color: #333; line-height: 1.7; max-width: 100%; padding: 16px; margin: 0; background: #fff">
+<article>
+<h1 style="font-size: 1.875em; font-weight: 700; margin: 1.2em 0 0.6em; line-height: 1.3">
+<ul style="margin: 0.8em 0; padding-left: 1.5em">
+  <li><strong>记忆</strong>：记住前面做了啥，别反复问同一个问题</li>
+  <li><strong>工具调用</strong>：能调 API、写文件、查数据库</li>
+</ul>
+<ul style="margin: 0.8em 0; padding-left: 1.5em">
+  <li><strong>DeepSeek-V3 / Qwen3-Max</strong>：开源替代，本地可部署</li>
+  <li><strong>GPT-5.4-mini / Claude Haiku</strong>：轻量版，适合简单工具链</li>
+</ul>
+<table style="border-collapse: collapse; width: 100%; margin: 1em 0">
+  <thead><tr>
+    <th>---</th>
+    <th>---</th>
+    <th>---</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td>AutoGen</td>
+      <td>多 Agent 协作</td>
+      <td>微软出品，多个 Agent 互相聊天</td>
+    </tr>
+    <tr>
+      <td>CrewAI</td>
+      <td>角色化编排</td>
+      <td>给每个 Agent 一个「人设」</td>
+    </tr>
+    <tr>
+      <td>Vercel AI SDK</td>
+      <td>前端开发者</td>
+      <td>和 Next.js 深度集成</td>
+    </tr>
+  </tbody>
+</table>
+<p style="margin: 0.8em 0; font-size: 16px">
+<pre style="background: #2d2d2d; color: #f8f8f2; padding: 1em; border-radius: 6px; overflow-x: auto; line-height: 1.5; margin: 1em 0; background: transparent; padding: 0; color: inherit; font-size: 0.875em">
+这里的关键是**描述**——LLM 靠描述来决定什么时候调这个工具。写得太抽象，它不知道怎么用；写得太长，它会忽略。
+
+**最佳实践**：每个工具的描述包含三要素：何时用、参数是什么、返回什么。
+
+## 第四步：串联起来
+
+一个完整的 Agent 工作流就像生产线：
+
+1. 接收用户输入
+2. LLM 决定要不要调工具，调哪个
+3. 执行工具，把结果塞回给 LLM
+4. LLM 根据结果决定下一步：调下一个工具？还是输出最终答案？
+5. 重复直到任务完成
+
+这个循环就是 **ReAct（Reasoning + Acting）**。
+</code></pre>
+<p style="margin: 0.8em 0; font-size: 16px">
+<pre style="background: #2d2d2d; color: #f8f8f2; padding: 1em; border-radius: 6px; overflow-x: auto; line-height: 1.5; margin: 1em 0; background: transparent; padding: 0; color: inherit; font-size: 0.875em">
+## 常见坑
+
+- **工具描述太抽象**：LLM 不知道何时该调，写清「何时用、用什么参数」
+- **没有 fallback**：工具调用失败要优雅降级，而不是崩溃
+- **上下文太长**：超过 100k token 后会丢早期信息，要加 summarization
+- **工具太多**：一次给 Agent 20 个工具，它大概率选错。控制 &lt;= 10 个
+
+## 总结
+
+Agent 不是更聪明的 chat。Agent 是**可执行的流程节点**。
+
+入门路径很简单：选 LLM → 选框架 → 写工具描述 → 跑通第一个 ReAct 循环。
+
+不要追求复杂。先让 Agent 做对一件事，再做更多。
+
+&gt; 推荐进一步阅读：[Lilian Weng 的 Agent 综述](https://lilianweng.github.io/posts/2023-06-23-agent/)，也可以在我们公众号后台留言「Agent 入门」获取 Cheat Sheet。
+</code></pre>
+</article>
+</body>
+</html>

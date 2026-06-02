@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 library/server.py —— L1 内容库的 MCP server 骨架
 
