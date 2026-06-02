@@ -12,7 +12,7 @@ description: HTML → PNG 渲染。给"小红书 9 宫格"和"公众号封面/�
 ## 这个 skill 不干什么
 
 - 不写 HTML 排版——那是 `render-html`
-- 不切 9 宫格——那是 `platform-xiaohongshu/tools/slice_grid.py`
+- 不把大图切成发布图——小红书主流程必须是一张卡片一个 HTML，再逐张截图
 - 不生成 AI 配图——以后可接 SD / ComfyUI
 
 ## 工作流
@@ -26,22 +26,23 @@ python skills/render-image/tools/render.py \
     --viewport 1080x1440
 ```
 
-### 9 宫格渲染（小红书专属）
+### 小红书多图渲染
 
 小红书的 9 宫格**应该**是 9 张独立可读的图。**不要**渲染 1 张大图再切——那会让"中间 4 张"看起来是 1 张图。
 
 正确做法：
-1. 把内容**先**按 3×3 拆分（每张 360×480）
-2. **每张**单独渲染成 PNG
-3. 用 `slice_grid.py` 拼成预览 contact sheet（不发布，只自检）
+1. 把内容**先**拆成 1-9 张独立 HTML 卡片（每张 1080×1440）
+2. **每张**单独渲染成 1080×1440 PNG
+3. 用 `render_grid.py` 生成 contact sheet（不发布，只自检）
 
-工具：`tools/render_grid.py`（**第 3 周实现**）
+工具：`tools/render_grid.py`
 
 ```bash
 python skills/render-image/tools/render_grid.py \
-    --html-grid-dir renders/xhs/grid-html/ \
-    --png-grid-dir renders/xhs/grid-png/ \
-    --rows 3 --cols 3
+    --input-dir renders/xhs/card-html/ \
+    --output-dir renders/xhs/card-png/ \
+    --rows 3 --cols 3 \
+    --cell-width 1080 --cell-height 1440
 ```
 
 ## 工具实现细节
@@ -80,7 +81,7 @@ if __name__ == "__main__":
     asyncio.run(render(args.html, args.png, {"width": w, "height": h}, args.full_page))
 ```
 
-### `tools/render_grid.py`（9 宫格）
+### `tools/render_grid.py`（小红书卡片组）
 
 详见 `platform-xiaohongshu/SKILL.md` 的工具契约。
 
@@ -88,10 +89,10 @@ if __name__ == "__main__":
 
 - 系统需安装中文字体（`wqy-microhei` / `noto-cjk` / 等）
 - 没有中文字体会出现"豆腐块"
-- `tools/check_fonts.py` 自检（**第 3 周实现**）
+- `tools/check_fonts.py` 自检（未实现）
 
 ## 关联
 
 - 上游：`render-html`（喂 HTML 进来）
-- 下游：`platform-xiaohongshu/tools/slice_grid.py`（9 宫格切图）
+- 下游：library 入库；`contact-sheet.png` 仅用于人工/agent 自检
 - 不依赖：`html-anything` 任何代码

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-run-pipeline —— 端到端 pipeline runner（**week 3 实现版**）
+run-pipeline —— 端到端 pipeline runner（工具层实现版）
 
 把 spec.json 跑通完整 pipeline:
   Step 1: 解析 spec
   Step 2: fact-check（**STUB**——用 web_extract，第 5 周实现自动）
-  Step 3: writer（**STUB**——读 templates/draft-<platform>.md 当作 writer 产出）
+  Step 3: writer（**STUB**——读 examples/hello-world/templates/draft-<platform>.json 当作 writer 产出）
   Step 4: reviewer（**STUB**——只跑硬约束自检 check_constraints.py）
-  Step 5: renderer（**真**——调 render.py 渲染单图，调 render_grid.py 渲染 9 宫格）
+  Step 5: renderer（**真**——公众号调 render.py；小红书先生成每张卡片 HTML，再逐张渲染）
   Step 6: 调 library-mcp 入库
 
-WEEK 5+ 真实化:
+后续真实化:
 - Step 2 接入 web_extract 自动核查
 - Step 3 替换为真 LLM writer subagent
 - Step 4 替换为真 LLM reviewer subagent
@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT))
 
 import library.server as L  # noqa: E402
 
-# 模板：给每个平台一个 stub writer 产出（week 5 之前用）
+# 示例草稿：给每个平台一个 stub writer 产出
 TEMPLATES_DIR = ROOT / "examples" / "hello-world" / "templates"
 
 
@@ -54,7 +54,15 @@ def run_step(label: str, fn) -> None:
     return result
 
 
-def render_for_platform(html_path: Path, output_dir: Path, platform: str) -> dict:
+def artifact_path(path: Path) -> str:
+    """Store repo-relative paths when possible; otherwise store absolute paths."""
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def render_for_platform(html_path: Path, output_dir: Path, platform: str, draft_json_path: Path | None = None) -> dict:
     """调用 render.py / render_grid.py 渲染图片"""
     output_dir.mkdir(parents=True, exist_ok=True)
     artifacts = {}
@@ -69,24 +77,26 @@ def render_for_platform(html_path: Path, output_dir: Path, platform: str) -> dic
         )
         artifacts["cover_png"] = png
     elif platform == "xiaohongshu":
-        # 9 宫格：先生成 1 张大图，再切
-        big_png = output_dir / "cover-big.png"
+        if draft_json_path is None:
+            raise ValueError("draft_json_path is required for xiaohongshu card rendering")
+        # 小红书发布图必须是多张独立可读卡片，不是把一张网页截图切成 9 片。
+        card_html_dir = output_dir / "card-html"
+        card_png_dir = output_dir / "card-png"
         subprocess.run(
-            ["python3", str(ROOT / "skills" / "render-image" / "tools" / "render.py"),
-             "--html", str(html_path), "--png", str(big_png), "--viewport", "1080x1440"],
-            check=True, capture_output=True,
+            ["python3", str(ROOT / "skills" / "platform-xiaohongshu" / "tools" / "build_cards.py"),
+             "--draft", str(draft_json_path), "--output-dir", str(card_html_dir), "--count", "9"],
+            check=True, capture_output=True, text=True,
         )
-        artifacts["cover_big_png"] = big_png
-        # 切 9 宫格
-        grid_dir = output_dir / "grid"
         subprocess.run(
-            ["python3", str(ROOT / "skills" / "platform-xiaohongshu" / "tools" / "slice_grid.py"),
-             "--input", str(big_png), "--output-dir", str(grid_dir), "--rows", "3", "--cols", "3"],
-            check=True, capture_output=True,
+            ["python3", str(ROOT / "skills" / "render-image" / "tools" / "render_grid.py"),
+             "--input-dir", str(card_html_dir), "--output-dir", str(card_png_dir),
+             "--rows", "3", "--cols", "3", "--cell-width", "1080", "--cell-height", "1440"],
+            check=True, capture_output=True, text=True,
         )
-        artifacts["grid_dir"] = grid_dir
-        artifacts["grid_pngs"] = sorted(p for p in grid_dir.glob("*.png") if not p.name.startswith("contact"))
-        artifacts["contact_sheet"] = grid_dir / "contact-sheet.png"
+        artifacts["card_html_dir"] = card_html_dir
+        artifacts["card_png_dir"] = card_png_dir
+        artifacts["grid_pngs"] = sorted(p for p in card_png_dir.glob("[0-9]*.png"))
+        artifacts["contact_sheet"] = card_png_dir / "contact-sheet.png"
     return artifacts
 
 
@@ -174,15 +184,6 @@ def main() -> None:
         verdict = "PASS" if report_data.get("pass") else "FAIL"
         print(f"   reviewer STUB: {verdict} (block={report_data.get('summary', {}).get('block', 0)}, warn={report_data.get('summary', {}).get('warn', 0)}, info={report_data.get('summary', {}).get('info', 0)})")
 
-        # 5. renderer (real)
-        if not args.skip_render:
-            render_dir = tmp_dir / "render"
-            artifacts = render_for_platform(platform_html_path, render_dir, platform)
-            if platform == "wechat":
-                print(f"   rendered: {artifacts['cover_png']}")
-            elif platform == "xiaohongshu":
-                print(f"   rendered: 1 big + {len(artifacts.get('grid_pngs', []))} tiles + contact-sheet")
-
         # 6. library inserts
         if article_id is None:
             aid = L.tool_insert_article({
@@ -208,6 +209,15 @@ def main() -> None:
         })
         print(f"   inserted draft id={did['draft_id']} platform={platform} status={did.get('status', '?')}")
 
+        # 5. renderer (real)
+        if not args.skip_render:
+            render_dir = tmp_dir / "render"
+            artifacts = render_for_platform(platform_html_path, render_dir, platform, draft_for_check)
+            if platform == "wechat":
+                print(f"   rendered: {artifacts['cover_png']}")
+            elif platform == "xiaohongshu":
+                print(f"   rendered: {len(artifacts.get('grid_pngs', []))} independent cards + contact-sheet")
+
         # 记录 derivative 文件
         for f in [inline_html_path, platform_html_path, check_report]:
             if f.exists():
@@ -219,7 +229,7 @@ def main() -> None:
                 dv = L.tool_insert_derivative({
                     "draft_id": did["draft_id"],
                     "kind": kind,
-                    "file_path": str(f.relative_to(ROOT)),
+                    "file_path": artifact_path(f),
                     "mime": "text/html",
                     "size_bytes": size,
                 })
@@ -232,28 +242,29 @@ def main() -> None:
                 dv = L.tool_insert_derivative({
                     "draft_id": did["draft_id"],
                     "kind": "png_cover",
-                    "file_path": str(f.relative_to(ROOT)),
+                    "file_path": artifact_path(f),
                     "mime": "image/png",
                     "size_bytes": f.stat().st_size,
                 })
                 derivative_ids.append(dv["derivative_id"])
             elif platform == "xiaohongshu":
-                if (render_dir / "cover-big.png").exists():
-                    f = render_dir / "cover-big.png"
+                card_png_dir = render_dir / "card-png"
+                first_card = card_png_dir / "01.png"
+                if first_card.exists():
+                    f = first_card
                     dv = L.tool_insert_derivative({
                         "draft_id": did["draft_id"],
                         "kind": "png_cover",
-                        "file_path": str(f.relative_to(ROOT)),
+                        "file_path": artifact_path(f),
                         "mime": "image/png",
                         "size_bytes": f.stat().st_size,
                     })
                     derivative_ids.append(dv["derivative_id"])
-                grid_dir = render_dir / "grid"
-                for i, gp in enumerate(sorted(grid_dir.glob("[0-9]*.png"))):
+                for gp in sorted(card_png_dir.glob("[0-9]*.png")):
                     dv = L.tool_insert_derivative({
                         "draft_id": did["draft_id"],
                         "kind": "png_grid",
-                        "file_path": str(gp.relative_to(ROOT)),
+                        "file_path": artifact_path(gp),
                         "mime": "image/png",
                         "size_bytes": gp.stat().st_size,
                     })

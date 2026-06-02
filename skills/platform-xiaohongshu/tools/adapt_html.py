@@ -5,7 +5,7 @@ adapt_html.py —— 小红书笔记适配器
 注意：小红书 App 的发布编辑器**不接收 HTML**——用户最终是用富文本编辑器手动粘。
 本工具产出的"适配 HTML"**只用于**：
 1. 渲染预览（看排版效果）
-2. 切片成 9 宫格 PNG（走 render-grid）
+2. 作为卡片 HTML / PNG 渲染前的预览清洗输入（小红书发布图走 build_cards.py + render_grid.py）
 
 做的事:
 1. 移除 <script>、外部 <link rel=stylesheet>、外部字体

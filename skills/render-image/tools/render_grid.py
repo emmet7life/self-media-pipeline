@@ -7,11 +7,11 @@ render_grid.py —— 把 N 张 HTML（9 宫格源）渲染成 N 张独立 PNG
 
 设计原则:
 - 9 张图独立可读（不是渲染 1 张大图再切，那样中间 4 张会"看起来像 1 张"）
-- 各自用相同 viewport（默认 360x480 = 1080/3 x 1440/3）
-- contact sheet 用 Pillow 拼成 3x3 大图，**只供 agent 自检**，不发布
+- 各自用相同 viewport（默认 1080x1440，即小红书单张发布图尺寸）
+- contact sheet 用 Pillow 拼成 3x3 预览图，**只供 agent 自检**，不发布
 
 用法:
-    python render_grid.py --input-dir renders/xhs/grid-html/ --output-dir renders/xhs/grid-png/ --rows 3 --cols 3
+    python render_grid.py --input-dir renders/xhs/card-html/ --output-dir renders/xhs/card-png/ --rows 3 --cols 3
 """
 import argparse
 import sys
@@ -100,8 +100,8 @@ def main() -> None:
     ap.add_argument("--output-dir", required=True, help="dir for NN.png output")
     ap.add_argument("--rows", type=int, default=3)
     ap.add_argument("--cols", type=int, default=3)
-    ap.add_argument("--cell-width", type=int, default=360, help="per-cell viewport width (default 1080/3)")
-    ap.add_argument("--cell-height", type=int, default=480, help="per-cell viewport height (default 1440/3)")
+    ap.add_argument("--cell-width", type=int, default=1080, help="per-card viewport width")
+    ap.add_argument("--cell-height", type=int, default=1440, help="per-card viewport height")
     ap.add_argument("--no-contact-sheet", action="store_true")
     args = ap.parse_args()
 

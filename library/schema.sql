@@ -1,6 +1,6 @@
 -- self-media-pipeline library schema
 -- 数据库位置: library/data/smp.db
--- 创建命令: sqlite3 library/data/smp.db < library/schema.sql
+-- 创建命令: ./tools/db init
 --
 -- 设计原则:
 -- 1. articles = 一次内容生产任务的源头（topic + 原料 + 风格参考）
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS articles (
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_articles_created_at ON articles(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_articles_created_at ON articles(created_at DESC);
 
 -- 一篇文章的一个平台版本 = 一个 draft
 -- status 流转: draft -> reviewed -> needs_human/approved
@@ -42,9 +42,9 @@ CREATE TABLE IF NOT EXISTS drafts (
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_drafts_article ON drafts(article_id);
-CREATE INDEX idx_drafts_platform_status ON drafts(platform, status);
-CREATE INDEX idx_drafts_created_at ON drafts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_drafts_article ON drafts(article_id);
+CREATE INDEX IF NOT EXISTS idx_drafts_platform_status ON drafts(platform, status);
+CREATE INDEX IF NOT EXISTS idx_drafts_created_at ON drafts(created_at DESC);
 
 -- draft 的可发布产物（一对一/多对多）
 -- kind 枚举:
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS derivatives (
     FOREIGN KEY (draft_id) REFERENCES drafts(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_derivatives_draft ON derivatives(draft_id);
-CREATE INDEX idx_derivatives_kind ON derivatives(kind);
+CREATE INDEX IF NOT EXISTS idx_derivatives_draft ON derivatives(draft_id);
+CREATE INDEX IF NOT EXISTS idx_derivatives_kind ON derivatives(kind);
 
 -- 发布记录
 CREATE TABLE IF NOT EXISTS publish_log (
@@ -79,8 +79,8 @@ CREATE TABLE IF NOT EXISTS publish_log (
     FOREIGN KEY (derivative_id) REFERENCES derivatives(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_publish_log_derivative ON publish_log(derivative_id);
-CREATE INDEX idx_publish_log_published_at ON publish_log(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_publish_log_derivative ON publish_log(derivative_id);
+CREATE INDEX IF NOT EXISTS idx_publish_log_published_at ON publish_log(published_at DESC);
 
 -- FTS5 全文搜索（articles.topic + drafts.body_markdown）
 CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(

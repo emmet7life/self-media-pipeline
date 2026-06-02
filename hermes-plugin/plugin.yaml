@@ -15,6 +15,8 @@ provides_skills:
   - render-image
   - fact-check
   - library-mcp
+  - template-library
+  - media-provider
 provides_subagents:
   - writer
   - reviewer
@@ -22,6 +24,7 @@ provides_subagents:
   - platform-adapter
 provides_tools:
   - list-targets
+  - list-templates
   - draft-spec
   - run-pipeline
   - db

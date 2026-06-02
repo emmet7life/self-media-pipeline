@@ -1,16 +1,15 @@
 # examples/hello-world
 
-第一个跑通的端到端样例。本周（第 1-2 周）目标：
+第一个跑通的端到端样例。目标：
 
-> 用户输入一句"写一篇关于 X 的公众号 + 小红书" → 用 `tools/run-pipeline` 跑通骨架版 → `db` 能查到产物。
+> 用户输入一句"写一篇关于 X 的公众号 + 小红书" → 用 `tools/run-pipeline` 跑通工具层 pipeline → `db` 能查到产物。
 
 ## 跑通
 
 ```bash
 # 0. 准备 db
 cd ~/self-media-pipeline
-rm -f library/data/smp.db*
-sqlite3 library/data/smp.db < library/schema.sql
+./tools/db init
 
 # 1. 生成 spec（写到一个固定文件，方便下游命令引用）
 ./tools/draft-spec \
@@ -20,7 +19,7 @@ sqlite3 library/data/smp.db < library/schema.sql
     --source "https://lilianweng.github.io/posts/2023-06-23-agent/" \
     --out examples/hello-world/spec.json
 
-# 2. 跑 pipeline（骨架版，不调 LLM）
+# 2. 跑 pipeline（工具层真实渲染/适配/入库；writer/reviewer/fact-check 仍是 stub）
 ./tools/run-pipeline --spec examples/hello-world/spec.json
 
 # 3. 查 library
@@ -37,11 +36,19 @@ sqlite3 library/data/smp.db < library/schema.sql
 
 ## 局限性
 
-本样例是**骨架版**，不调 LLM。真正生成内容需要等第 3 周：
+本样例不调 LLM。当前真实执行的是：
 - `render-html/tools/render.py`
 - `render-image/tools/render.py`
-- `platform-xiaohongshu/tools/slice_grid.py`
-- writer subagent 用 LLM 起草
+- `render-image/tools/render_grid.py`
+- `platform-wechat/tools/adapt_html.py`
+- `platform-xiaohongshu/tools/adapt_html.py`
+- `platform-xiaohongshu/tools/build_cards.py`
+- SQLite/MCP 入库
+
+仍是 stub 的部分：
+- fact-check：只打印提示，不做自动核查
+- writer：读取 `examples/hello-world/templates/draft-<platform>.json`
+- reviewer：只跑平台硬约束脚本，不做 LLM 审校
 
 ## 关联
 

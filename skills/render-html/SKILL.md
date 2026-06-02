@@ -83,7 +83,7 @@ writer 调用本 skill 后，产出的 HTML 必须满足：
 
 ## 工具
 
-### `tools/render.py`（**第 3 周实现**）
+### `tools/render.py`
 
 ```bash
 python skills/render-html/tools/render.py --input draft.md --output article.html

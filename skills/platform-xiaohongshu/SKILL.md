@@ -18,9 +18,10 @@ platform-xiaohongshu/
 ├── SKILL.md
 ├── constraints.json
 └── tools/
-    ├── adapt_html.py        # 同公众号的 inline 适配（小红书图片外嵌 HTML 也要 inline）
+    ├── adapt_html.py        # 预览 HTML 清洗
+    ├── build_cards.py       # draft → 每张独立小红书卡片 HTML
     ├── check_constraints.py # 硬约束自检
-    └── slice_grid.py        # 9 宫格切图（核心工具，由 Codex 子任务实现）
+    └── slice_grid.py        # 低层切图工具；不作为发布主流程
 ```
 
 ## 硬约束（来自 constraints.json）
@@ -48,13 +49,14 @@ platform-xiaohongshu/
 - 格式：jpg / png（**不**支持 webp）
 - 文件大小：单张 ≤ 5 MB
 
-### 9 宫格切图（核心约束）
+### 多图卡片（核心约束）
 
-`tools/slice_grid.py` 做的事：
-1. 输入：单张 1080 × 1440 的大图（由 `render-image` 生成）
-2. 输出：3 × 3 排列的 9 张 360 × 480 切片，**带接缝引导线**
+小红书发布图必须是**独立 1-9 张 1080 × 1440 图片**。禁止把一个网页截图或一张大图切成 9 张发布图。
 
-> 注意：原生小红书是**独立 9 张图**而不是"大图切片"——接缝处的内容必须可独立阅读。建议 pipeline 在 render-image 阶段就**先**按 3 × 3 渲染，**再**拼成大图，最后切片发布。
+正确流程：
+1. `tools/build_cards.py`：把 draft 拆成 `card-html/01.html` ... `09.html`
+2. `render-image/tools/render_grid.py`：逐个 HTML 截图成 `card-png/01.png` ... `09.png`
+3. `contact-sheet.png` 只作为自检预览，不发布
 
 ### 绝对禁用
 
@@ -110,18 +112,22 @@ platform-xiaohongshu/
 - 配图数量（1-9）
 - 配图尺寸（每张必须 1080×1440）
 
-### `tools/slice_grid.py`（核心）
+### `tools/build_cards.py`（核心）
 
 ```bash
-python skills/platform-xiaohongshu/tools/slice_grid.py \
-    --input renders/xhs/cover.png \
-    --output-dir renders/xhs/grid/ \
-    --rows 3 --cols 3
+python skills/platform-xiaohongshu/tools/build_cards.py \
+    --draft examples/<run-id>/drafts/xiaohongshu.json \
+    --output-dir examples/<run-id>/render/xiaohongshu/card-html \
+    --count 9
 ```
 
 输出：
-- `grid/01.png` ... `grid/09.png`（360×480，按阅读顺序）
-- `grid/contact-sheet.png`（带接缝的预览图，agent 可用它再自检一次）
+- `card-html/01.html` ... `card-html/09.html`（每个文件是一张 1080×1440 发布图的源 HTML）
+- `manifest.json`
+
+### `tools/slice_grid.py`（兼容/低层工具）
+
+仅用于特殊场景或测试，不作为小红书发布图主路径。发布主路径必须走 `build_cards.py` + `render_grid.py`。
 
 ## 关联
 

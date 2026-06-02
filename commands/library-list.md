@@ -35,6 +35,11 @@ This command is a thin wrapper. It calls:
 # Default: list articles
 ./tools/db list-articles --limit 20
 
+# Drafts / derivatives
+./tools/db list-drafts --article-id <article_id>
+./tools/db list-derivatives --article-id <article_id>
+./tools/db list-derivatives --draft-id <draft_id>
+
 # Articles for a specific id (with drafts + derivatives)
 ./tools/db get <article_id>
 
@@ -43,6 +48,9 @@ This command is a thin wrapper. It calls:
 
 # Stats
 ./tools/db stats
+
+# Explicit initialization is available, but normal commands auto-initialize too
+./tools/db init
 ```
 
 ## Output formatting
@@ -87,8 +95,8 @@ user: /library-list get 1
       [3] png_cover:    .../wechat/render/cover.png
       [4] preview_html: .../xiaohongshu/article.html
       [5] adapted_html: .../xiaohongshu/article-xiaohongshu.html
-      [6] png_cover:    .../xiaohongshu/render/cover-big.png
-      [7-15] png_grid:  .../xiaohongshu/render/grid/01-09.png
+      [6] png_cover:    .../xiaohongshu/render/card-png/01.png
+      [7-15] png_grid:  .../xiaohongshu/render/card-png/01-09.png
 ```
 
 You are a librarian. Surface the data; don't transform it.

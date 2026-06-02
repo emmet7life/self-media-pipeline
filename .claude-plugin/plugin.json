@@ -1,6 +1,6 @@
 {
   "name": "self-media-pipeline",
-  "description": "Agent-native 自媒体内容生产工作流：给定一段原料，自动生成微信公众号 + 小红书 + 其他平台的可发布产物（HTML 可粘贴 / 9 宫格图片 / Markdown）。由 writer / reviewer / renderer / platform-adapter 4 个 subagent 协作完成，全部产物入 SQLite 内容库可追溯。",
+  "description": "Agent-native 自媒体内容生产工作流：给定一段原料，自动生成微信公众号 + 小红书 + 其他平台的可发布产物。支持模板库、逐卡片小红书图片、可替换多媒体 provider，全部产物入 SQLite 内容库可追溯。",
   "version": "0.5.0",
   "author": {
     "name": "self-media-pipeline owner",
@@ -15,6 +15,8 @@
     "xiaohongshu",
     "content-pipeline",
     "agent-native",
+    "templates",
+    "multimedia",
     "writer",
     "reviewer",
     "renderer"

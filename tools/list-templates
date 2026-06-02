@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""List self-media-pipeline visual templates."""
+from pathlib import Path
+import re
+
+ROOT = Path(__file__).resolve().parent.parent
+TEMPLATES_DIR = ROOT / "templates"
+
+
+def parse_frontmatter(path: Path) -> dict:
+    raw = path.read_text(encoding="utf-8")
+    m = re.match(r"---\s*\n(.*?)\n---", raw, flags=re.S)
+    data = {}
+    if not m:
+        return data
+    for line in m.group(1).splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        data[key.strip()] = value.strip().strip('"').strip("'")
+    return data
+
+
+def main() -> None:
+    rows = []
+    for skill_path in sorted(TEMPLATES_DIR.glob("*/SKILL.md")):
+        template_id = skill_path.parent.name
+        fm = parse_frontmatter(skill_path)
+        rows.append((
+            template_id,
+            fm.get("platform", ""),
+            "yes" if (skill_path.parent / "example.html").exists() else "no",
+            fm.get("description", ""),
+        ))
+    if not rows:
+        print("(no templates)")
+        return
+    print(f"{'ID':<28} {'PLATFORM':<14} {'EXAMPLE':<8} DESCRIPTION")
+    print("-" * 100)
+    for row in rows:
+        print(f"{row[0]:<28} {row[1]:<14} {row[2]:<8} {row[3]}")
+
+
+if __name__ == "__main__":
+    main()

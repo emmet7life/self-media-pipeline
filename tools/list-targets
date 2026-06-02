@@ -43,10 +43,11 @@ TARGETS = [
         "tools_implemented": [
             "skills/platform-xiaohongshu/tools/adapt_html.py",
             "skills/platform-xiaohongshu/tools/check_constraints.py",
-            "skills/platform-xiaohongshu/tools/slice_grid.py",
+            "skills/platform-xiaohongshu/tools/build_cards.py",
+            "skills/render-image/tools/render_grid.py",
         ],
         "tools_planned": [],
-        "note": "全部工具实现完成（slice_grid.py 由 Codex 子任务实现）",
+        "note": "工具层实现完成；发布图走 build_cards.py + render_grid.py，slice_grid.py 仅保留为低层工具",
     },
     {
         "id": "zhihu",

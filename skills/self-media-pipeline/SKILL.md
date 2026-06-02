@@ -1,6 +1,6 @@
 ---
 name: self-media-pipeline
-description: 自媒体内容生产 pipeline 顶层工作流。用户在 Hermes TUI 里说"写一篇关于 X 的公众号/小红书"时 由 orchestrator 加载本 skill。本 skill 定义从原料到可发布产物的端到端步骤、subagent 调度、 产物在 library/ 的落盘契约、错误恢复策略。本 skill 本身**不直接产出内容**，而是**编排其他 subagent**（writer / reviewer / platform-adapter / renderer）。
+description: 自媒体内容生产 pipeline 顶层工作流。用户在 Claude Code/Codex 里说"写一篇关于 X 的公众号/小红书"时由 orchestrator 加载本 skill。本 skill 定义从原料到可发布产物的端到端步骤、subagent 调度、模板选择、产物入库契约和错误恢复策略。
 ---
 
 # self-media-pipeline
@@ -14,7 +14,7 @@ description: 自媒体内容生产 pipeline 顶层工作流。用户在 Hermes T
 - 不写正文（交给 `writer` subagent）
 - 不审校（交给 `reviewer` subagent）
 - 不做平台适配（交给 `platform-adapter` subagent）
-- 不做 HTML 渲染 / PNG 切片（交给 `renderer` subagent）
+- 不做 HTML 渲染 / PNG 截图（交给 `renderer` subagent）
 - 不入库（统一收口在本 skill 的最后一步）
 
 **原则**：本 skill 只**编排**。所有写操作发生在 subagent session 里，本 skill 只把"成品路径 + 摘要"收上来再调 `library-mcp` 工具入库。
@@ -31,12 +31,13 @@ target_platforms: [<从用户输入提取>]
 source_material: <可选>
 style_reference: <可选>
 word_count_target: <可选>
+template_id: <可选, 如 wechat-magazine-editorial 或 xhs-pastel-card-deck>
 constraints:        # 平台规则硬性约束
   wechat:
     max_chars: 20000
     inline_css_only: true
   xiaohongshu:
-    grid: "3x3"           # 9 宫格
+    cards: "1-9 independent images"
     cover_size: "1080x1440"
 ```
 
@@ -51,22 +52,30 @@ constraints:        # 平台规则硬性约束
 
 **短路过门**：原料是用户自写、不涉及外部事实 → 跳过。
 
+### Step 2.5 —— 选择模板（强烈建议）
+
+如果用户没有指定模板，先运行 `./tools/list-templates`，按平台选择默认模板：
+- WeChat：`wechat-magazine-editorial`
+- Xiaohongshu：`xhs-pastel-card-deck`
+
+读取 `templates/<template_id>/SKILL.md` 和 `example.html`。模板是视觉锚点，不是可选装饰；公众号和小红书不应只依赖通用 markdown CSS。
+
 ### Step 3 —— 写作（每个目标平台一个 writer subagent）
 
-对每个 `target_platforms` 中的平台，**并行** spawn `writer` subagent（独立的 Hermes session）。
+对每个 `target_platforms` 中的平台，**并行** spawn `writer` subagent（独立 agent session）。
 
 writer subagent 加载：
-- `skills/render-html/SKILL.md`（排版规范）
 - `skills/fact-check/SKILL.md`（如果 Step 2 启用）
 - 该平台的 skill（如 `skills/platform-wechat/SKILL.md`）
+- `skills/template-library/SKILL.md`
+- 选定模板的 `templates/<template_id>/SKILL.md` 和 `example.html`
 
-writer 产出的契约（写到 `examples/<timestamp>/drafts/<platform>.md`）：
+writer 产出的契约（写到 `examples/<timestamp>/drafts/<platform>.json`）：
 
 ```yaml
 title: <string>
 platform: <wechat | xiaohongshu>
 body_markdown: <string>      # 原始 markdown
-inline_html: <string>        # 已经按平台规则 inline 过的 HTML
 images:                       # 配图占位（不需要实际图，但需要位置标注）
   - slot: cover
     aspect: "1080x1440"
@@ -79,7 +88,7 @@ metadata:
   reading_time_min: <int>
 ```
 
-**关键**：writer 输出的 HTML 已经是"平台适配过的"——这一步就把 platform-adapter 的活儿干了。如果该平台只有少量规则，可以**让 writer 直接加载 platform skill**，省一个 subagent。
+**关键**：writer 只写内容契约，不写最终平台 HTML。公众号 HTML 后续应由模板库指导生成；小红书由 `build_cards.py` 生成每张独立卡片 HTML。
 
 ### Step 4 —— 审校（每个 draft 一个 reviewer subagent）
 
@@ -95,9 +104,15 @@ reviewer 产出：审校报告（pass / list-of-issues），写到 `examples/<ti
 
 ### Step 5 —— 渲染（每个需要图像的产物调一次）
 
+先对每个通过审校的 draft 运行 `skills/render-html/tools/render.py --from-draft <draft.json>`，生成 inline HTML。
+
+再调 `platform-adapter` subagent，把 inline HTML 转成平台可发布 HTML：
+- WeChat：清洗脚本/link/style，保留可粘贴 inline HTML
+- Xiaohongshu：清洗外链和敏感联系方式，保留图片渲染所需结构
+
 如果产物需要 PNG（小红书必然需要；公众号可选）：
 
-调 `skills/render-image/SKILL.md` 的工具（headless chrome 截图 + 9 宫格切图），把 `draft.images[].prompt` 渲染成实际图片文件。
+调 `skills/render-image/SKILL.md` 的工具（headless chrome 截图），把 HTML 卡片或封面渲染成实际图片文件。小红书必须一张图一个 HTML、一张图一个 PNG，禁止把一张网页截图切成 9 张发布图。
 
 输出路径：`examples/<timestamp>/renders/<platform>/`。
 
@@ -130,7 +145,7 @@ INSERT INTO derivatives (draft_id, kind, file_path, mime, size_bytes, created_at
 ## 不重写
 
 - **平台规则的知识**：全部由对应 platform skill 维护，不在本 skill 里 copy 一份
-- **HTML 模板 / CSS 风格**：全部在 `render-html/SKILL.md` 里
+- **HTML 模板 / CSS 风格**：优先在 `template-library` 与 `templates/<id>/` 里
 - **敏感词词表**：全部在 `fact-check/SKILL.md` 里
 
 本 skill 只**编排**和**入库**。所有领域知识下沉到对应子 skill。
@@ -143,6 +158,8 @@ INSERT INTO derivatives (draft_id, kind, file_path, mime, size_bytes, created_at
   - `skills/render-image/SKILL.md`
   - `skills/fact-check/SKILL.md`
   - `skills/library-mcp/SKILL.md`
+  - `skills/template-library/SKILL.md`
+  - `skills/media-provider/SKILL.md`
   - `skills/platform-wechat/SKILL.md`
   - `skills/platform-xiaohongshu/SKILL.md`
 - 工具契约：见 `tools/run-pipeline` 的 SPEC

@@ -2,13 +2,13 @@
 
 ## 这是什么
 
-一个 **agent-native plugin**，给公司做自媒体内容生产。给定一段原料（一段主题 / 一篇草稿 / 一个链接），自动生成微信公众号 + 小红书（+ 未来知乎 / B 站）的可发布产物。
+一个 **agent-native plugin**，给公司做自媒体内容生产。给定一段原料（一段主题 / 一篇草稿 / 一个链接），自动生成微信公众号 + 小红书（+ 未来知乎 / B 站）的可发布产物。当前主目标 runtime 是 **Claude Code + Codex**。
 
 **核心不是 HTML 渲染器，是 4 个 subagent 协作的工作流**：
 - `writer` 起草内容（用 LLM）
 - `reviewer` 审校（事实 + 风格 + 平台硬约束）
 - `platform-adapter` 做平台特定适配（公众号清洗 / 小红书 9 宫格）
-- `renderer` 渲染（HTML → PNG，9 宫格切图）
+- `renderer` 渲染（HTML → PNG；小红书逐卡片截图，不切单张大图）
 
 **全部产物入 SQLite 内容库**——可追溯、可重放、可改稿。
 
@@ -17,14 +17,16 @@
 ```
 self-media-pipeline/
 ├── .claude-plugin/plugin.json     # Claude Code 识别
-├── hermes-plugin/plugin.yaml      # Hermes 识别
+├── .codex-plugin/plugin.json      # Codex 识别
+├── hermes-plugin/plugin.yaml      # 历史兼容，当前不是主目标
 ├── AGENTS.md                      # 本文件（给所有 agent 看的项目说明）
 ├── README.md                      # 给人看的 plugin 介绍
-├── skills/                        # 7 个 SKILL.md（领域知识封装）
+├── skills/                        # 9 个 SKILL.md（领域知识封装）
+├── templates/                     # 视觉模板库（SKILL.md + example.html）
 ├── agents/                        # 4 个 subagent 定义（执行主体）
 ├── commands/                      # 2 个斜杠命令（用户入口）
 ├── hooks/hooks.json               # sessionStart 钩子
-├── tools/                         # 4 个共享 CLI 工具
+├── tools/                         # 5 个共享 CLI 工具
 ├── library/                       # L1 内容库（SQLite + MCP server）
 ├── examples/hello-world/          # 端到端跑通的样例
 └── docs/                          # ADR + 贡献文档
@@ -53,17 +55,18 @@ writer 不审校，reviewer 不写作，platform-adapter 不渲染，renderer �
 
 | 组件 | 状态 |
 |---|---|
-| Plugin manifest（双） | ✓ |
+| Plugin manifest（Claude Code + Codex） | ✓ |
 | AGENTS.md / README.md | ✓ |
-| `skills/` (7) | ✓ 全部就位 |
+| `skills/` (9) | ✓ 全部就位 |
+| `templates/` | ✓ 最小骨架（公众号杂志长文 + 小红书卡片组） |
 | `agents/` (4) | ✓ 已写定义（writer/reviewer/renderer/platform-adapter） |
 | `commands/` (2) | ✓ quick-draft / library-list |
 | `hooks/` | ✓ sessionStart 提示 |
-| `tools/` (4) | ✓ list-targets / draft-spec / run-pipeline / db |
-| `library/` | ✓ SQLite + MCP server（7 个工具） |
-| e2e pipeline | ✓ hello-world 跑通（1 article + 2 drafts + 15 derivatives） |
-| 单元测试 | ❌ 0 个 |
-| 真实 LLM 起草 | ❌ writer subagent 定义写好但需要真 LLM 接入（用父 agent的 model: inherit） |
+| `tools/` (5) | ✓ list-targets / list-templates / draft-spec / run-pipeline / db |
+| `library/` | ✓ SQLite + MCP server（7 个工具，自动按 schema 初始化） |
+| e2e pipeline | ✓ hello-world 工具层跑通；小红书逐卡片 HTML→PNG（writer/reviewer/fact-check 仍是 stub） |
+| 单元测试 | ✓ 37 个 |
+| 真实 LLM 起草 | ❌ writer subagent 定义写好但需要 Claude Code/Codex subagent e2e 验证（用父 agent 的 model: inherit） |
 
 详见 `docs/ADR-001-agent-native-architecture.md`。
 
@@ -90,9 +93,12 @@ writer 不审校，reviewer 不写作，platform-adapter 不渲染，renderer �
 
 ## 跨 agent runtime 适配
 
-本 plugin 设计支持：
+本 plugin 当前主目标：
 - **Claude Code**：`.claude-plugin/plugin.json` + `agents/*.md` + `commands/*.md`
-- **Hermes**：`hermes-plugin/plugin.yaml` + `skills/*/SKILL.md`（subagent 通过 `delegate_task` 工具调度）
+- **Codex**：`.codex-plugin/plugin.json` + `skills/*/SKILL.md`，subagent 调度按 Codex multi-agent 能力适配
+
+非当前目标：
+- **Hermes**：保留 `hermes-plugin/plugin.yaml` 作为历史兼容，不再作为当前验收标准
 - **openclaw**（未来）：plugin 目录结构 + `/subagents` 命令
 
 ## 关联

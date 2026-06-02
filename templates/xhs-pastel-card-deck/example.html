@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小红书卡片示例</title>
+  <style>
+    html,body{width:1080px;height:1440px;margin:0;overflow:hidden}
+    body{background:radial-gradient(circle at 15% 10%,#ffd9cc,transparent 28%),#fff6ef;color:#25211d;font-family:Inter,"Noto Sans SC","PingFang SC",sans-serif}
+    .card{width:1080px;height:1440px;padding:92px 86px 76px;display:flex;flex-direction:column}
+    .paper{flex:1;background:rgba(255,253,248,.94);border:3px dashed rgba(37,33,29,.22);border-radius:44px;padding:76px 72px;box-shadow:0 28px 80px rgba(73,52,39,.16)}
+    .kicker{font-size:30px;letter-spacing:.16em;color:#e95d45;font-weight:900;margin-bottom:34px}
+    h1{font-size:88px;line-height:1.04;margin:0 0 34px;font-weight:900}
+    p{font-size:42px;line-height:1.42;margin:0 0 24px}
+    .dots{margin-top:42px;display:flex;gap:14px;justify-content:center}.dot{width:14px;height:14px;border-radius:50%;background:#ead7c8}.dot.on{background:#e95d45}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <section class="paper">
+      <div class="kicker">SAVE THIS</div>
+      <h1>AI Agent<br>入门 3 步</h1>
+      <p>不是再问一个聊天机器人，而是让 AI 读规则、调工具、留下产物。</p>
+      <div class="dots"><span class="dot on"></span><span class="dot"></span><span class="dot"></span></div>
+    </section>
+  </main>
+</body>
+</html>

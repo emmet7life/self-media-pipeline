@@ -6,11 +6,11 @@
 
 ## 这是什么
 
-一个 **plugin**，不是项目、不是工具集、不是 web 应用。**4 个 subagent 协作 + 7 个 skill + 2 个 command + 1 个 SQLite 内容库**，跑在 Claude Code / Hermes / 其他兼容 agent runtime 上。
+一个 **plugin**，不是项目、不是工具集、不是 web 应用。当前目标是适配 **Claude Code + Codex**：4 个 subagent 协作、9 个 skill、2 个 command、5 个 CLI 工具、1 个 SQLite 内容库。
 
 ## 用户视角：怎么用
 
-在装了此 plugin 的 agent runtime（Claude Code / Hermes / 兼容 runtime）里：
+在装了此 plugin 的 agent runtime（Claude Code / Codex）里：
 
 ```
 /quick-draft 写一篇关于 AI Agent 入门 的公众号 + 小红书
@@ -35,7 +35,7 @@ agent 会自动：
 
 ### User-level（推荐，全局可用）
 
-把 plugin 装到 `~/.claude/plugins/` 或 `~/.hermes/plugins/` 下，**所有项目都能用**：
+把 plugin 装到 Claude Code 或 Codex 的 plugin 目录下，**所有项目都能用**：
 
 #### Claude Code
 ```bash
@@ -52,10 +52,9 @@ ls ~/.claude/plugins/self-media-pipeline/
 # 应该看到 agents/ commands/ hooks/ skills/ tools/ .claude-plugin/
 ```
 
-#### Hermes
-```bash
-hermes plugins install ./self-media-pipeline
-```
+#### Codex
+
+Codex 使用 `.codex-plugin/plugin.json` 识别本插件，技能目录为 `./skills/`。安装方式取决于你使用的 Codex 插件管理入口；开发时可把整个仓库作为 plugin 根使用。
 
 ### Project-level（仓库内自带 / 开发模式）
 
@@ -70,7 +69,7 @@ git clone https://github.com/emmet7life/self-media-pipeline.git ~/media-publish-
 cd ~/media-publish-test/
 
 # 2. 仓库根目录就是 plugin 根，**不要**执行任何 mv / 改名操作
-#    - 仓库根已经有：.claude-plugin/ agents/ commands/ hooks/ skills/ tools/
+#    - 仓库根已经有：.claude-plugin/ .codex-plugin/ agents/ commands/ hooks/ skills/ tools/
 #    - 启动 Claude Code 即可加载
 claude --dangerously-skip-permissions
 # 3. 验证
@@ -82,7 +81,7 @@ ls skills/ agents/ commands/ hooks/  # 都在
 - ❌ `mv skills/ .claude/skills/` —— plugin 根的内容应直接在根，**不**在 `.claude/` 下
 - ❌ 把仓库 clone 到 `~/projects/<name>/` 然后**只 cp 几个目录到 `.claude/`** —— 这会破坏 plugin 完整性
 
-**判断方式**：plugin 根必须有 `.claude-plugin/plugin.json` **和** `skills/` `agents/` `commands/` `hooks/` `tools/` 平级。
+**判断方式**：plugin 根必须有 `.claude-plugin/plugin.json`、`.codex-plugin/plugin.json` **和** `skills/` `agents/` `commands/` `hooks/` `tools/` 平级。
 
 ## 架构（一图流）
 
@@ -94,9 +93,9 @@ ls skills/ agents/ commands/ hooks/  # 都在
 └──────────────────────────────────────────────────────┘
         ↑  MCP（stdio）
 ┌──────────────────────────────────────────────────────┐
-│ L2  Hermes / Claude Code orchestrator                │
+│ L2  Claude Code / Codex orchestrator                 │
 │     - 加载 self-media-pipeline skill                 │
-│     - 调度 4 个 subagent（delegate_task / Task tool） │
+│     - 调度 4 个 subagent（Task / Codex multi-agent）  │
 │     - subagent: writer / reviewer / renderer /       │
 │       platform-adapter                                │
 └──────────────────────────────────────────────────────┘
@@ -110,6 +109,8 @@ ls skills/ agents/ commands/ hooks/  # 都在
 │   render-image/          HTML → PNG（headless chrome）│
 │   fact-check/            引用核查 / 敏感词 / 版权     │
 │   library-mcp/           内容库 MCP 工具契约          │
+│   template-library/      视觉模板库契约               │
+│   media-provider/        MiniMax/其他 CLI 抽象层      │
 └──────────────────────────────────────────────────────┘
         ↑  shell out
 ┌──────────────────────────────────────────────────────┐
@@ -118,6 +119,7 @@ ls skills/ agents/ commands/ hooks/  # 都在
 │   draft-spec             生成平台目标 spec            │
 │   run-pipeline           手动触发端到端 pipeline      │
 │   db                     library SQLite 的 CLI 包装  │
+│   list-templates         列出模板库                   │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -126,14 +128,16 @@ ls skills/ agents/ commands/ hooks/  # 都在
 ```
 self-media-pipeline/
 ├── .claude-plugin/plugin.json     # Claude Code manifest
-├── hermes-plugin/plugin.yaml      # Hermes manifest
+├── .codex-plugin/plugin.json      # Codex manifest
+├── hermes-plugin/plugin.yaml      # 历史兼容，当前不是主目标
 ├── AGENTS.md / CLAUDE.md          # 项目级指令（多 runtime 适配）
 ├── README.md                      # 本文件
-├── skills/                        # 7 个 SKILL.md（领域知识）
+├── skills/                        # 9 个 SKILL.md（领域知识）
+├── templates/                     # 视觉模板库（SKILL.md + example.html）
 ├── agents/                        # 4 个 subagent 定义
 ├── commands/                      # 2 个斜杠命令
 ├── hooks/hooks.json               # sessionStart 提示
-├── tools/                         # 4 个共享 CLI
+├── tools/                         # 5 个共享 CLI
 ├── library/                       # L1 内容库
 │   ├── schema.sql
 │   ├── server.py                  # MCP server
@@ -148,7 +152,7 @@ self-media-pipeline/
 
 ```bash
 cd ~/self-media-pipeline
-sqlite3 library/data/smp.db < library/schema.sql
+./tools/db init
 ./tools/draft-spec --topic "AI Agent 入门" --platforms wechat,xiaohongshu --out examples/hello-world/spec.json
 ./tools/run-pipeline --spec examples/hello-world/spec.json
 ./tools/db get 1
@@ -163,7 +167,8 @@ sqlite3 library/data/smp.db < library/schema.sql
 3. **L1 内容库跟 agent 解耦** —— agent 是用户，不是主。L1 是普通 CRUD 服务。
 4. **平台规则三层分** —— 硬约束进 `constraints.json`、风格指南在 SKILL.md body、机械活在 `tools/*.py`。
 5. **每个 subagent 单一职责** —— writer 不审校，reviewer 不写作，platform-adapter 不渲染，renderer 不写正文。
-6. **plugin 跨 runtime 兼容** —— 双 manifest（`.claude-plugin/plugin.json` + `hermes-plugin/plugin.yaml`），共享 `skills/` / `agents/` / `commands/` / `hooks/`。
+6. **plugin 跨 runtime 兼容** —— 当前主目标是 Claude Code + Codex，双 manifest（`.claude-plugin/plugin.json` + `.codex-plugin/plugin.json`），共享 `skills/` / `agents/` / `commands/` / `hooks/`。
+7. **模板库优先于 markdown 转 HTML** —— 公众号和小红书应优先选择 `templates/<id>/example.html` 这种高质量视觉锚点，而不是只套一层通用 markdown CSS。
 
 ## 贡献
 
@@ -171,21 +176,23 @@ sqlite3 library/data/smp.db < library/schema.sql
 - **加新 subagent**：创建 `agents/<name>.md`，更新 `hermes-plugin/plugin.yaml`
 - **加新 command**：创建 `commands/<name>.md`，更新 `hermes-plugin/plugin.yaml`
 - **架构决策**：[`docs/ADR-001-agent-native-architecture.md`](docs/ADR-001-agent-native-architecture.md)
+- **模板库决策**：[`docs/ADR-006-template-library-and-media-provider.md`](docs/ADR-006-template-library-and-media-provider.md)
 
 ## 当前状态
 
 | 组件 | 状态 |
 |---|---|
-| Plugin manifest（双） | ✓ |
-| `skills/` (7) | ✓ |
+| Plugin manifest（Claude Code + Codex） | ✓ |
+| `skills/` (9) | ✓ |
+| `templates/` | ✓ 最小骨架（公众号杂志长文 + 小红书卡片组） |
 | `agents/` (4) | ✓ |
 | `commands/` (2) | ✓ |
 | `hooks/` | ✓ |
-| `tools/` (4) | ✓ |
-| `library/` (SQLite + MCP) | ✓ |
-| e2e 端到端（hello-world） | ✓ |
-| 单元测试 | ❌ 0 个 |
-| 真实 LLM 起草（writer subagent 用 `model: inherit`） | ❌ 待 e2e 验证 |
+| `tools/` (5) | ✓ |
+| `library/` (SQLite + MCP) | ✓ 自动按 `schema.sql` 初始化 |
+| e2e 端到端（hello-world） | ✓ 工具层跑通；小红书改为逐卡片 HTML→PNG；writer/reviewer/fact-check 仍是 stub |
+| 单元测试 | ✓ 37 个 |
+| 真实 LLM 起草（writer subagent 用 `model: inherit`） | ❌ 待 Claude Code/Codex subagent e2e 验证 |
 | 微信 API 直接发布 | ❌ 第 9+ 周 |
 | GUI / web 入口 | ❌ 第 9+ 周 |
 
@@ -193,5 +200,6 @@ sqlite3 library/data/smp.db < library/schema.sql
 
 - 起源 / 上下文：`~/html-anything/developer_documents/templates-skills-and-marketplace.md`
 - 架构决策：`docs/ADR-001-agent-native-architecture.md`
+- 模板库决策：`docs/ADR-006-template-library-and-media-provider.md`
 - 新平台贡献指南：`docs/adding-a-new-platform-skill.md`
 - 端到端跑通样例：`examples/hello-world/README.md`

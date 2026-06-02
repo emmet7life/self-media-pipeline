@@ -3,7 +3,10 @@
 db —— library SQLite 的 CLI 包装
 
 用法:
+    python tools/db init
     python tools/db list-articles
+    python tools/db list-drafts [--article-id <id>]
+    python tools/db list-derivatives [--article-id <id> | --draft-id <id>]
     python tools/db get <article_id>
     python tools/db search "<query>"
     python tools/db stats
@@ -17,6 +20,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import library.server as L  # noqa: E402
+
+
+def cmd_init(args: argparse.Namespace) -> None:
+    L.initialize_db()
+    print(f"initialized {L.DB_PATH}")
 
 
 def cmd_list_articles(args: argparse.Namespace) -> None:
@@ -47,6 +55,73 @@ def cmd_get(args: argparse.Namespace) -> None:
         print(f"    [{dv['id']}] draft_id={dv['draft_id']} kind={dv['kind']:<14} path={dv['file_path']}")
 
 
+def cmd_list_drafts(args: argparse.Namespace) -> None:
+    with L.get_db() as conn:
+        if args.article_id is None:
+            rows = conn.execute(
+                """SELECT id, article_id, platform, status, title, created_at
+                   FROM drafts
+                   ORDER BY created_at DESC
+                   LIMIT ?""",
+                (args.limit,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT id, article_id, platform, status, title, created_at
+                   FROM drafts
+                   WHERE article_id = ?
+                   ORDER BY platform, created_at DESC
+                   LIMIT ?""",
+                (args.article_id, args.limit),
+            ).fetchall()
+    if not rows:
+        print("(no drafts)")
+        return
+    print(f"{'ID':<5} {'ARTICLE':<8} {'PLATFORM':<12} {'STATUS':<12} TITLE")
+    print("-" * 90)
+    for d in rows:
+        print(f"{d['id']:<5} {d['article_id']:<8} {d['platform']:<12} {d['status']:<12} {d['title'] or ''}")
+
+
+def cmd_list_derivatives(args: argparse.Namespace) -> None:
+    with L.get_db() as conn:
+        if args.draft_id is not None:
+            rows = conn.execute(
+                """SELECT dv.id, dv.draft_id, d.article_id, dv.kind, dv.mime, dv.size_bytes, dv.file_path
+                   FROM derivatives dv
+                   JOIN drafts d ON d.id = dv.draft_id
+                   WHERE dv.draft_id = ?
+                   ORDER BY dv.id""",
+                (args.draft_id,),
+            ).fetchall()
+        elif args.article_id is not None:
+            rows = conn.execute(
+                """SELECT dv.id, dv.draft_id, d.article_id, dv.kind, dv.mime, dv.size_bytes, dv.file_path
+                   FROM derivatives dv
+                   JOIN drafts d ON d.id = dv.draft_id
+                   WHERE d.article_id = ?
+                   ORDER BY d.platform, dv.id""",
+                (args.article_id,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT dv.id, dv.draft_id, d.article_id, dv.kind, dv.mime, dv.size_bytes, dv.file_path
+                   FROM derivatives dv
+                   JOIN drafts d ON d.id = dv.draft_id
+                   ORDER BY dv.created_at DESC
+                   LIMIT ?""",
+                (args.limit,),
+            ).fetchall()
+    if not rows:
+        print("(no derivatives)")
+        return
+    print(f"{'ID':<5} {'ARTICLE':<8} {'DRAFT':<7} {'KIND':<14} {'SIZE':<10} PATH")
+    print("-" * 110)
+    for dv in rows:
+        size = "" if dv["size_bytes"] is None else str(dv["size_bytes"])
+        print(f"{dv['id']:<5} {dv['article_id']:<8} {dv['draft_id']:<7} {dv['kind']:<14} {size:<10} {dv['file_path']}")
+
+
 def cmd_search(args: argparse.Namespace) -> None:
     res = L.tool_search_articles({"query": args.query})
     if not res["matches"]:
@@ -58,23 +133,34 @@ def cmd_search(args: argparse.Namespace) -> None:
 
 
 def cmd_stats(args: argparse.Namespace) -> None:
-    # 用 raw SQL
-    import sqlite3
-    conn = sqlite3.connect(str(L.DB_PATH))
-    conn.row_factory = sqlite3.Row
-    for table in ["articles", "drafts", "derivatives", "publish_log"]:
-        n = conn.execute(f"SELECT COUNT(*) AS c FROM {table}").fetchone()["c"]
-        print(f"  {table}: {n}")
-    conn.close()
+    with L.get_db() as conn:
+        for table in ["articles", "drafts", "derivatives", "publish_log"]:
+            n = conn.execute(f"SELECT COUNT(*) AS c FROM {table}").fetchone()["c"]
+            print(f"  {table}: {n}")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="library CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
+    p0 = sub.add_parser("init")
+    p0.set_defaults(func=cmd_init)
+
     p1 = sub.add_parser("list-articles")
     p1.add_argument("--limit", type=int, default=20)
     p1.set_defaults(func=cmd_list_articles)
+
+    p1b = sub.add_parser("list-drafts")
+    p1b.add_argument("--article-id", type=int)
+    p1b.add_argument("--limit", type=int, default=20)
+    p1b.set_defaults(func=cmd_list_drafts)
+
+    p1c = sub.add_parser("list-derivatives")
+    derivative_filter = p1c.add_mutually_exclusive_group()
+    derivative_filter.add_argument("--article-id", type=int)
+    derivative_filter.add_argument("--draft-id", type=int)
+    p1c.add_argument("--limit", type=int, default=20)
+    p1c.set_defaults(func=cmd_list_derivatives)
 
     p2 = sub.add_parser("get")
     p2.add_argument("article_id", type=int)

@@ -15,10 +15,21 @@ from typing import Any
 
 # 定位数据库文件
 DB_PATH = Path(__file__).parent / "data" / "smp.db"
+SCHEMA_PATH = Path(__file__).parent / "schema.sql"
+
+
+def initialize_db() -> None:
+    """Create the SQLite database schema if it has not been initialized yet."""
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not SCHEMA_PATH.exists():
+        raise FileNotFoundError(f"schema not found: {SCHEMA_PATH}")
+    with sqlite3.connect(str(DB_PATH)) as conn:
+        conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        conn.execute("PRAGMA foreign_keys = ON")
 
 
 def get_db() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    initialize_db()
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")

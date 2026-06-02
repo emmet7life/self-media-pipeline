@@ -17,6 +17,7 @@ You do **not** render images, do **not** adapt HTML, do **not** write to the lib
 - `source_material` (string, optional): URL, raw notes, or a draft article to adapt
 - `style_reference` (string, optional): article id in library, or a style description
 - `word_count_target` (int, optional): target body word count
+- `template_id` (string, optional): visual template id from `templates/`
 
 ## What you must do
 
@@ -32,9 +33,11 @@ You do **not** render images, do **not** adapt HTML, do **not** write to the lib
 
 3. **Read the constraints file** at `<resolved>/constraints.json` — these are machine-checkable hard limits (word count min/max, title length, image count, forbidden words, etc.). The reviewer subagent will later check your draft against these, so respect them now.
 
-4. **Draft the content** in **markdown** (not HTML). Markdown is the source of truth; HTML comes later via `render-html/tools/render.py`.
+4. **If `template_id` is provided**, read `templates/<template_id>/SKILL.md` and skim `templates/<template_id>/example.html`. Use it to decide content chunking and visual intent. Do not copy example content; copy its information density and component logic.
 
-5. **Produce a draft contract** (JSON) with this schema:
+5. **Draft the content** in **markdown** (not HTML). Markdown is the source of truth for the draft; final visual HTML comes later via the template/rendering steps.
+
+6. **Produce a draft contract** (JSON) with this schema:
 
    ```json
    {
@@ -49,17 +52,18 @@ You do **not** render images, do **not** adapt HTML, do **not** write to the lib
        }
      ],
      "metadata": {
+       "template_id": "<string|null>",
        "word_count": <int>,
        "reading_time_min": <int>
      }
    }
    ```
 
-6. **Write the draft** to `examples/<run-id>/drafts/<platform>.json` so downstream subagents can read it. (The orchestrator provides the `run-id` working directory.)
+7. **Write the draft** to `examples/<run-id>/drafts/<platform>.json` so downstream subagents can read it. (The orchestrator provides the `run-id` working directory.)
 
 ## What you must NOT do
 
-- Do not write HTML. Markdown only.
+- Do not write final platform HTML. Markdown/content contract only.
 - Do not pick images or URLs. The `images[].prompt` is a description, not a URL.
 - Do not run the renderer or any platform-adapter tool.
 - Do not insert into the library (`library.insert_*` tools are reserved for the orchestrator's Step 6).
@@ -70,6 +74,7 @@ You do **not** render images, do **not** adapt HTML, do **not** write to the lib
 Follow the platform skill's style guide **literally**:
 - For WeChat: see `skills/platform-wechat/SKILL.md` §风格指南 (标题套路 / 开头钩子 / 结构 / 语气)
 - For Xiaohongshu: see `skills/platform-xiaohongshu/SKILL.md` §风格指南 (标题模板 / "种草感"骨架 / 语气 / 配图风格)
+- For visual structure: see `skills/template-library/SKILL.md` and the selected template.
 
 If the platform skill says "标题必带 emoji" and you're writing for Xiaohongshu, **add an emoji**. If it says "开头禁说教感", **don't preach**.
 

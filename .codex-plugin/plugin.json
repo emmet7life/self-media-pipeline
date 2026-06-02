@@ -1,0 +1,41 @@
+{
+  "name": "self-media-pipeline",
+  "version": "0.5.0",
+  "description": "Agent-native self-media content production plugin for WeChat articles, Xiaohongshu image posts, and future multimedia derivatives.",
+  "author": {
+    "name": "self-media-pipeline owner",
+    "email": "owner@self-media-pipeline.local"
+  },
+  "homepage": "https://github.com/owner/self-media-pipeline",
+  "repository": "https://github.com/owner/self-media-pipeline",
+  "license": "MIT",
+  "keywords": [
+    "self-media",
+    "wechat",
+    "xiaohongshu",
+    "content-pipeline",
+    "agent-native",
+    "templates",
+    "multimedia"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Self Media Pipeline",
+    "shortDescription": "Generate WeChat articles and Xiaohongshu card posts with reusable agent skills.",
+    "longDescription": "Turns topics, drafts, or source material into traceable self-media assets using writer, reviewer, platform adapter, renderer, template library, and media-provider skills.",
+    "developerName": "self-media-pipeline owner",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "帮我把这段素材生成公众号和小红书版本。",
+      "用模板库做一篇可发布的自媒体内容。"
+    ],
+    "websiteURL": "https://github.com/owner/self-media-pipeline",
+    "brandColor": "#D94F30",
+    "screenshots": []
+  }
+}
