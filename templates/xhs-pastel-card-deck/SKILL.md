@@ -2,6 +2,10 @@
 name: xhs-pastel-card-deck
 platform: xiaohongshu
 description: 小红书 3:4 独立卡片组模板。每张图都是独立 HTML 和独立 PNG，适合教程、清单、避坑、步骤拆解。
+status: active
+default: true
+content_type: card_deck
+output_kind: independent_card_html
 ---
 
 # xhs-pastel-card-deck
@@ -28,4 +32,3 @@ description: 小红书 3:4 独立卡片组模板。每张图都是独立 HTML �
 - 禁止把一个网页截图切成 9 张。
 - 禁止 360×480 低分辨率发布图。
 - 禁止纯白底大字堆满屏。
-

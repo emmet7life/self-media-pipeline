@@ -52,10 +52,10 @@ def adapt_for_wechat(html: str) -> str:
 
     # 6. Tables: add border/cellspacing/cellpadding if missing
     def fix_table(m):
-        tag = m.group(1)  # <table ...> or <table>
-        if 'border' not in tag:
-            tag = tag.rstrip('>') + ' border="1" cellspacing="0" cellpadding="8">'
-        return tag
+        attrs = m.group(1)
+        if re.search(r'\bborder\s*=', attrs, flags=re.IGNORECASE):
+            return f'<table{attrs}>'
+        return f'<table{attrs} border="1" cellspacing="0" cellpadding="8">'
     html = re.sub(r'<table\b([^>]*)>', fix_table, html, flags=re.IGNORECASE)
 
     return html

@@ -23,25 +23,35 @@ description: 自媒体内容生产 pipeline 顶层工作流。用户在 Claude C
 
 ### Step 1 —— 解析与计划
 
-把用户的自然语言解析成一个**机器可读的 spec**，落到 `examples/<timestamp>/spec.yaml`：
+把用户的自然语言解析成一个**机器可读的 spec**，落到 `examples/<timestamp>/spec.json`：
 
-```yaml
-topic: "<从用户输入提取>"
-target_platforms: [<从用户输入提取>]
-source_material: <可选>
-style_reference: <可选>
-word_count_target: <可选>
-template_id: <可选, 如 wechat-magazine-editorial 或 xhs-pastel-card-deck>
-constraints:        # 平台规则硬性约束
-  wechat:
-    max_chars: 20000
-    inline_css_only: true
-  xiaohongshu:
-    cards: "1-9 independent images"
-    cover_size: "1080x1440"
+```json
+{
+  "topic": "<从用户输入提取>",
+  "target_platforms": ["wechat", "xiaohongshu"],
+  "template_selection": {
+    "wechat": "wechat-magazine-editorial",
+    "xiaohongshu": "xhs-pastel-card-deck"
+  },
+  "source_material": "<可选>",
+  "style_reference": "<可选>",
+  "word_count_target": 800,
+  "constraints": {
+    "wechat": {"max_chars": 5000, "inline_css_only": true},
+    "xiaohongshu": {"max_chars": 1000, "grid": "3x3", "cover_size": "1080x1440"}
+  }
+}
 ```
 
 **判断**：spec 是否能跑通？不能则向用户追问，不要 spawn subagent。
+
+平台与模板选择规则：
+
+- 如果用户没有指定平台，运行 `python3 tools/list-targets --active-only --json`，只让用户选择 active/selectable 平台。
+- 如果用户指定了 planned 或未知平台，解释该平台尚不可产出，并列出 active 平台。
+- 如果用户没有为某个平台指定模板，运行 `python3 tools/list-templates --platform <platform> --json`。
+- 如果该平台有唯一 default 模板，自动选择并告知用户；否则列出模板 ID + 简短说明，询问用户选择。
+- spec 中必须写入 `template_selection`；不要只在自然语言上下文里记住模板。
 
 ### Step 2 —— 调研（可选）
 
@@ -54,7 +64,7 @@ constraints:        # 平台规则硬性约束
 
 ### Step 2.5 —— 选择模板（强烈建议）
 
-如果用户没有指定模板，先运行 `./tools/list-templates`，按平台选择默认模板：
+如果用户没有指定模板，先运行 `./tools/list-templates --platform <platform> --json`，按平台选择默认模板：
 - WeChat：`wechat-magazine-editorial`
 - Xiaohongshu：`xhs-pastel-card-deck`
 

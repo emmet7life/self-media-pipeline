@@ -1,44 +1,53 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """List self-media-pipeline visual templates."""
-from pathlib import Path
-import re
 
-ROOT = Path(__file__).resolve().parent.parent
-TEMPLATES_DIR = ROOT / "templates"
+import argparse
+import json
+import sys
 
-
-def parse_frontmatter(path: Path) -> dict:
-    raw = path.read_text(encoding="utf-8")
-    m = re.match(r"---\s*\n(.*?)\n---", raw, flags=re.S)
-    data = {}
-    if not m:
-        return data
-    for line in m.group(1).splitlines():
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        data[key.strip()] = value.strip().strip('"').strip("'")
-    return data
+from _catalog import list_templates, validate_catalog
 
 
 def main() -> None:
-    rows = []
-    for skill_path in sorted(TEMPLATES_DIR.glob("*/SKILL.md")):
-        template_id = skill_path.parent.name
-        fm = parse_frontmatter(skill_path)
-        rows.append((
-            template_id,
-            fm.get("platform", ""),
-            "yes" if (skill_path.parent / "example.html").exists() else "no",
-            fm.get("description", ""),
-        ))
+    ap = argparse.ArgumentParser(description="List reusable self-media visual templates")
+    ap.add_argument("--platform", help="filter templates by platform id")
+    ap.add_argument("--json", action="store_true", help="emit JSON")
+    ap.add_argument("--include-inactive", action="store_true", help="include inactive templates")
+    ap.add_argument("--validate", action="store_true", help="validate platform/template catalog")
+    args = ap.parse_args()
+
+    if args.validate:
+        issues = validate_catalog()
+        if args.json:
+            json.dump({"pass": not issues, "issues": issues}, sys.stdout, ensure_ascii=False, indent=2)
+            sys.stdout.write("\n")
+        elif issues:
+            for issue in issues:
+                print(f"ERROR: {issue}", file=sys.stderr)
+        else:
+            print("catalog OK")
+        if issues:
+            sys.exit(1)
+        return
+
+    rows = list_templates(platform=args.platform, include_inactive=args.include_inactive)
+
+    if args.json:
+        json.dump(rows, sys.stdout, ensure_ascii=False, indent=2)
+        sys.stdout.write("\n")
+        return
+
     if not rows:
         print("(no templates)")
         return
-    print(f"{'ID':<28} {'PLATFORM':<14} {'EXAMPLE':<8} DESCRIPTION")
-    print("-" * 100)
+    print(f"{'ID':<28} {'PLATFORM':<14} {'DEFAULT':<8} {'EXAMPLE':<8} DESCRIPTION")
+    print("-" * 112)
     for row in rows:
-        print(f"{row[0]:<28} {row[1]:<14} {row[2]:<8} {row[3]}")
+        default = "yes" if row["default"] else "no"
+        example = "yes" if row["has_example"] else "no"
+        print(f"{row['id']:<28} {row['platform']:<14} {default:<8} {example:<8} {row['description']}")
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@
 
 ```
 /quick-draft 写一篇关于 AI Agent 入门 的公众号 + 小红书
+/quick-draft "AI Agent 入门" --platforms=wechat --templates=wechat=wechat-magazine-editorial
 /library-list
 ```
 
@@ -23,11 +24,30 @@
 
 agent 会自动：
 1. 加载 `self-media-pipeline` 顶层 skill
-2. spawn `writer` subagent（×2，每个平台一个）
-3. spawn `reviewer` subagent
-4. spawn `platform-adapter` subagent
-5. spawn `renderer` subagent
-6. 入 SQLite 内容库
+2. 如果缺平台，列出 active 平台供用户选择
+3. 如果缺模板，按平台列出模板 ID + 简短说明，并自动使用唯一默认模板
+4. spawn `writer` subagent（每个平台一个）
+5. spawn `reviewer` subagent
+6. spawn `platform-adapter` subagent
+7. spawn `renderer` subagent
+8. 入 SQLite 内容库
+
+查看当前可选平台和模板：
+
+```bash
+./tools/list-targets --active-only
+./tools/list-templates --platform wechat
+./tools/list-templates --platform xiaohongshu
+```
+
+生成 spec 时也可以显式指定每个平台的模板：
+
+```bash
+./tools/draft-spec \
+  --topic "AI Agent 入门" \
+  --platforms wechat,xiaohongshu \
+  --templates wechat=wechat-magazine-editorial,xiaohongshu=xhs-pastel-card-deck
+```
 
 ## 安装
 

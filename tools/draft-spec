@@ -18,36 +18,43 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
 
-
-# 平台硬性约束（镜像 constraints.json，避免重复读文件）
-PLATFORM_DEFAULTS = {
-    "wechat": {
-        "max_chars": 5000,
-        "inline_css_only": True,
-    },
-    "xiaohongshu": {
-        "max_chars": 1000,
-        "grid": "3x3",
-        "cover_size": "1080x1440",
-    },
-}
+from _catalog import (  # noqa: E402
+    active_platform_ids,
+    list_platforms,
+    parse_template_selection,
+    platform_defaults,
+    resolve_template_selection,
+)
 
 
 def build_spec(args: argparse.Namespace) -> dict:
     platforms = [p.strip() for p in args.platforms.split(",") if p.strip()]
-    unknown = [p for p in platforms if p not in PLATFORM_DEFAULTS]
+    active = active_platform_ids()
+    unknown = [p for p in platforms if p not in active]
     if unknown:
-        print(f"ERROR: unknown platform(s): {unknown}; supported: {list(PLATFORM_DEFAULTS.keys())}", file=sys.stderr)
+        print(f"ERROR: unknown or inactive platform(s): {unknown}; active: {active}", file=sys.stderr)
+        planned = [p["id"] for p in list_platforms(include_planned=True) if p["status"] == "planned"]
+        if planned:
+            print(f"INFO: planned but not selectable yet: {planned}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        explicit_templates = parse_template_selection(args.templates)
+        template_selection = resolve_template_selection(platforms, explicit_templates)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
     spec = {
         "topic": args.topic,
         "target_platforms": platforms,
+        "template_selection": template_selection,
         "source_material": args.source,
         "style_reference": args.style_reference,
         "word_count_target": args.word_count,
-        "constraints": {p: PLATFORM_DEFAULTS[p] for p in platforms},
+        "constraints": {p: platform_defaults(p) for p in platforms},
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     return spec
@@ -57,6 +64,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Generate pipeline spec from user input")
     ap.add_argument("--topic", required=True)
     ap.add_argument("--platforms", default="wechat,xiaohongshu", help="comma-separated")
+    ap.add_argument(
+        "--templates",
+        help="comma-separated platform=template-id mappings, e.g. wechat=wechat-magazine-editorial",
+    )
     ap.add_argument("--source", help="source material (URL or path)")
     ap.add_argument("--style-reference", help="style reference article id or description")
     ap.add_argument("--word-count", type=int, help="target word count")

@@ -1,95 +1,33 @@
 #!/usr/bin/env python3
-"""
-list-targets —— 列出所有已支持的目标平台及其状态
+from __future__ import annotations
 
-用法:
-    python tools/list-targets              # 人类可读
-    python tools/list-targets --json       # JSON
+"""List supported publishing targets and their selectable status."""
 
-输出每个目标的:
-- id           平台 id
-- skill 目录    对应 skill
-- status       active / stub / planned
-- constraints  路径
-- 备注
-"""
 import argparse
 import json
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-
-TARGETS = [
-    {
-        "id": "wechat",
-        "name": "微信公众号",
-        "skill_dir": "skills/platform-wechat",
-        "constraints": "skills/platform-wechat/constraints.json",
-        "status": "active",
-        "tools_implemented": [
-            "skills/platform-wechat/tools/adapt_html.py",
-            "skills/platform-wechat/tools/check_constraints.py",
-        ],
-        "tools_planned": [],
-        "note": "全部工具实现完成",
-    },
-    {
-        "id": "xiaohongshu",
-        "name": "小红书",
-        "skill_dir": "skills/platform-xiaohongshu",
-        "constraints": "skills/platform-xiaohongshu/constraints.json",
-        "status": "active",
-        "tools_implemented": [
-            "skills/platform-xiaohongshu/tools/adapt_html.py",
-            "skills/platform-xiaohongshu/tools/check_constraints.py",
-            "skills/platform-xiaohongshu/tools/build_cards.py",
-            "skills/render-image/tools/render_grid.py",
-        ],
-        "tools_planned": [],
-        "note": "工具层实现完成；发布图走 build_cards.py + render_grid.py，slice_grid.py 仅保留为低层工具",
-    },
-    {
-        "id": "zhihu",
-        "name": "知乎",
-        "skill_dir": None,
-        "constraints": None,
-        "status": "planned",
-        "note": "第 9+ 周评估",
-    },
-    {
-        "id": "bilibili",
-        "name": "B 站专栏",
-        "skill_dir": None,
-        "constraints": None,
-        "status": "planned",
-        "note": "第 9+ 周评估",
-    },
-    {
-        "id": "weibo",
-        "name": "微博",
-        "skill_dir": None,
-        "constraints": None,
-        "status": "planned",
-        "note": "第 9+ 周评估",
-    },
-]
+from _catalog import list_platforms
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--json", action="store_true")
+    ap = argparse.ArgumentParser(description="List self-media-pipeline platform targets")
+    ap.add_argument("--json", action="store_true", help="emit JSON")
+    ap.add_argument("--active-only", action="store_true", help="only show active/selectable targets")
     args = ap.parse_args()
 
+    rows = list_platforms(include_planned=not args.active_only)
+
     if args.json:
-        json.dump(TARGETS, sys.stdout, ensure_ascii=False, indent=2)
+        json.dump(rows, sys.stdout, ensure_ascii=False, indent=2)
         sys.stdout.write("\n")
         return
 
-    print(f"{'ID':<14} {'NAME':<14} {'STATUS':<10} {'NOTE'}")
-    print("-" * 70)
-    for t in TARGETS:
-        print(f"{t['id']:<14} {t['name']:<14} {t['status']:<10} {t['note']}")
+    print(f"{'ID':<14} {'NAME':<14} {'STATUS':<10} {'SELECTABLE':<10} NOTE")
+    print("-" * 86)
+    for row in rows:
+        selectable = "yes" if row.get("selectable") else "no"
+        print(f"{row['id']:<14} {row['name']:<14} {row['status']:<10} {selectable:<10} {row.get('note', '')}")
 
 
 if __name__ == "__main__":

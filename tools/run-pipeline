@@ -30,8 +30,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tools"))
 
 import library.server as L  # noqa: E402
+from _catalog import resolve_template_selection  # noqa: E402
 
 TEMPLATES_DIR = ROOT / "examples" / "hello-world" / "templates"
 
@@ -155,6 +157,14 @@ def main() -> None:
     args = ap.parse_args()
 
     spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+    try:
+        template_selection = resolve_template_selection(
+            spec["target_platforms"],
+            spec.get("template_selection", {}),
+        )
+    except ValueError as exc:
+        raise SystemExit(f"ERROR: invalid template selection: {exc}") from exc
+    spec["template_selection"] = template_selection
 
     # Determine run directory
     if args.run_dir:
@@ -167,7 +177,10 @@ def main() -> None:
     output_root = run_dir / "scratch" / "output"
     output_root.mkdir(parents=True, exist_ok=True)
 
-    print(f"[step 1/6] spec: topic={spec['topic']!r}, platforms={spec['target_platforms']}, mode={'real-llm' if args.real_llm else 'stub'}")
+    print(
+        f"[step 1/6] spec: topic={spec['topic']!r}, platforms={spec['target_platforms']}, "
+        f"templates={template_selection}, mode={'real-llm' if args.real_llm else 'stub'}"
+    )
 
     # Step 2 (stub)
     if spec.get("source_material"):
@@ -178,6 +191,8 @@ def main() -> None:
 
     for platform in spec["target_platforms"]:
         print(f"\n=== platform: {platform} ===")
+        template_id = template_selection[platform]
+        print(f"   template: {template_id}")
 
         # Step 3: Writer
         if args.real_llm:
@@ -225,6 +240,16 @@ def main() -> None:
         # Step 4: Reviewer
         check_report = tmp_dir / "check-report.json"
         review_report_path = run_dir / "reviews" / f"{platform}.json"
+        draft_for_check = tmp_dir / "draft-for-check.json"
+        draft_for_check.write_text(json.dumps({
+            "title": draft["title"], "body_markdown": draft["body_markdown"],
+            "inline_html": platform_html_path.read_text(encoding="utf-8"),
+            "images": draft.get("images", []),
+            "metadata": {
+                **draft.get("metadata", {}),
+                "template_id": template_id,
+            },
+        }, ensure_ascii=False), encoding="utf-8")
 
         if args.real_llm and review_report_path.exists():
             # Use real review report
@@ -236,13 +261,6 @@ def main() -> None:
                   f"warn={report_data.get('summary', {}).get('warn', 0)})")
         else:
             # Run hard constraint check only (stub reviewer)
-            draft_for_check = tmp_dir / "draft-for-check.json"
-            draft_for_check.write_text(json.dumps({
-                "title": draft["title"], "body_markdown": draft["body_markdown"],
-                "inline_html": platform_html_path.read_text(encoding="utf-8"),
-                "images": draft.get("images", []),
-            }, ensure_ascii=False), encoding="utf-8")
-
             rc = subprocess.run(
                 ["python3", str(ROOT / "skills" / f"platform-{platform}" / "tools" / "check_constraints.py"),
                  str(draft_for_check)],
@@ -284,6 +302,9 @@ def main() -> None:
             "metadata_json": json.dumps({
                 "word_count": len(draft["body_markdown"]),
                 "image_count": len(draft.get("images", [])),
+                "template_id": template_id,
+                "template_skill": f"templates/{template_id}/SKILL.md",
+                "template_example": f"templates/{template_id}/example.html",
             }, ensure_ascii=False),
         })
         print(f"   inserted draft id={did['draft_id']} platform={platform} status={'reviewed' if report_data.get('pass') else 'needs_human'}")

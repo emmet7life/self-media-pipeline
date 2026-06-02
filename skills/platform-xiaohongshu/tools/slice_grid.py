@@ -43,7 +43,6 @@ CLI:
     2 参数/IO 错误
     1 未捕获异常
 """
-from __future__ import annotations
 
 import argparse
 import sys

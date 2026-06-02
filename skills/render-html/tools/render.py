@@ -75,14 +75,14 @@ def render_inline(text: str) -> str:
     text = html.escape(text, quote=False)
     # Code first (don't process inside code)
     text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
+    # Images before links so ![alt](src) is not parsed as a plain link.
+    text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', r'<img src="\2" alt="\1" />', text)
     # Bold
     text = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', text)
     # Italic
     text = re.sub(r'(?<!\*)\*([^*\n]+)\*(?!\*)', r'<em>\1</em>', text)
     # Links
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
-    # Images
-    text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', r'<img src="\2" alt="\1" />', text)
     return text
 
 
@@ -95,6 +95,10 @@ def render_markdown(md_text: str, title: str | None = None) -> str:
 
     while i < n:
         line = lines[i]
+
+        if not line.strip():
+            i += 1
+            continue
 
         # Code block (```)
         if line.strip().startswith('```'):
@@ -196,9 +200,6 @@ def render_markdown(md_text: str, title: str | None = None) -> str:
             clean = ' '.join(l.strip() for l in para_lines if l.strip())
             out.append(f'<p>{render_inline(clean)}</p>')
 
-        if not para_lines and i > 0 and not lines[i-1].strip() and i < n:
-            i += 1
-
     body_html = '\n'.join(out)
 
     full_html = f"""<!DOCTYPE html>
@@ -239,14 +240,25 @@ def render_markdown(md_text: str, title: str | None = None) -> str:
                 if sm:
                     existing_style = sm.group(1)
                 all_style = existing_style + '; ' + '; '.join(style_attrs) if existing_style else '; '.join(style_attrs)
+                escaped_style = html.escape(all_style, quote=True)
                 if sm:
-                    attrs_str = attrs_str[:sm.start()] + f' style="{all_style}"' + attrs_str[sm.end():]
+                    attrs_str = attrs_str[:sm.start()] + f' style="{escaped_style}"' + attrs_str[sm.end():]
                 else:
-                    attrs_str += f' style="{all_style}"'
-                line = f'<{tag}{attrs_str}>'
+                    attrs_str += f' style="{escaped_style}"'
+                line = f'<{tag}{attrs_str}>' + line[m.end():]
         result_lines.append(line)
 
     return '\n'.join(result_lines)
+
+
+def load_draft(path: str) -> tuple[str | None, str]:
+    data = json.loads(Path(path).read_text(encoding='utf-8'))
+    if 'body_markdown' not in data:
+        raise KeyError(
+            f"draft at {path} is missing required field 'body_markdown'. "
+            f"Got keys: {list(data.keys())}"
+        )
+    return data.get('title'), data['body_markdown']
 
 
 def main() -> None:
@@ -259,11 +271,22 @@ def main() -> None:
     args = ap.parse_args()
 
     if args.from_draft:
-        data = json.loads(Path(args.from_draft).read_text(encoding='utf-8'))
-        md_text = data.get('body_markdown', '')
-        title = args.title or data.get('title', '')
+        try:
+            draft_title, md_text = load_draft(args.from_draft)
+        except (FileNotFoundError, json.JSONDecodeError, KeyError) as exc:
+            ap.error(str(exc))
+        title = args.title or draft_title or ''
     elif args.input:
-        md_text = Path(args.input).read_text(encoding='utf-8')
+        try:
+            md_text = Path(args.input).read_text(encoding='utf-8')
+        except (FileNotFoundError, IsADirectoryError) as exc:
+            ap.error(f"cannot read input file: {exc}")
+        stripped = md_text.lstrip()
+        if stripped.startswith('{') and '"body_markdown"' in stripped[:500]:
+            ap.error(
+                f"input file {args.input} looks like a draft JSON contract, not a markdown file. "
+                f"Use --from-draft to extract body_markdown and title."
+            )
         title = args.title or ''
     else:
         md_text = sys.stdin.read()

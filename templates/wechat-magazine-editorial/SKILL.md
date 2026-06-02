@@ -2,6 +2,10 @@
 name: wechat-magazine-editorial
 platform: wechat
 description: 公众号杂志长文模板。适合深度文章、方法论、案例复盘；用 masthead、超大标题、双栏/单栏正文、pull quote 和编号章节制造出版感。
+status: active
+default: true
+content_type: longform
+output_kind: article_html
 ---
 
 # wechat-magazine-editorial
@@ -23,4 +27,3 @@ description: 公众号杂志长文模板。适合深度文章、方法论、案�
 - 不要输出普通 markdown 转 HTML 的单调段落流。
 - 不要使用外链图片作为核心视觉。
 - 不要依赖 class 样式在公众号里存活；重要样式要能被 `platform-wechat/tools/adapt_html.py` 保留。
-
