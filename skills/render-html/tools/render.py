@@ -238,7 +238,20 @@ def main() -> None:
         # 优先用 CLI --title 覆盖 draft title
         title = args.title or draft_title
     elif args.input:
-        md_text = Path(args.input).read_text(encoding="utf-8")
+        # P0-A 防护: 拒绝把 draft JSON 文件当 markdown positional 传入
+        # 否则整个 JSON 会被当 markdown 渲染，产物是 raw JSON 字符
+        try:
+            text = Path(args.input).read_text(encoding="utf-8")
+        except (FileNotFoundError, IsADirectoryError) as e:
+            ap.error(f"cannot read input file: {e}")
+        stripped = text.lstrip()
+        if stripped.startswith("{") and '"body_markdown"' in stripped[:200]:
+            ap.error(
+                f"input file {args.input} looks like a draft JSON contract, not a markdown file. "
+                f"Use --from-draft to auto-extract body_markdown + title. "
+                f"See 'render.py --help' for details."
+            )
+        md_text = text
         title = args.title
     else:
         md_text = sys.stdin.read()
