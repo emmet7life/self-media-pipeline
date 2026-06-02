@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""
+list-targets —— 列出所有已支持的目标平台及其状态
+
+用法:
+    python tools/list-targets              # 人类可读
+    python tools/list-targets --json       # JSON
+
+输出每个目标的:
+- id           平台 id
+- skill 目录    对应 skill
+- status       active / stub / planned
+- constraints  路径
+- 备注
+"""
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+TARGETS = [
+    {
+        "id": "wechat",
+        "name": "微信公众号",
+        "skill_dir": "skills/platform-wechat",
+        "constraints": "skills/platform-wechat/constraints.json",
+        "status": "active",
+        "tools_implemented": [],
+        "tools_planned": [
+            "skills/platform-wechat/tools/adapt_html.py",
+            "skills/platform-wechat/tools/check_constraints.py",
+        ],
+        "note": "骨架完成；adapt/check 工具第 3 周实现",
+    },
+    {
+        "id": "xiaohongshu",
+        "name": "小红书",
+        "skill_dir": "skills/platform-xiaohongshu",
+        "constraints": "skills/platform-xiaohongshu/constraints.json",
+        "status": "active",
+        "tools_implemented": [],
+        "tools_planned": [
+            "skills/platform-xiaohongshu/tools/adapt_html.py",
+            "skills/platform-xiaohongshu/tools/check_constraints.py",
+            "skills/platform-xiaohongshu/tools/slice_grid.py",
+        ],
+        "note": "骨架完成；9 宫格切图第 3 周实现",
+    },
+    {
+        "id": "zhihu",
+        "name": "知乎",
+        "skill_dir": None,
+        "constraints": None,
+        "status": "planned",
+        "note": "第 9+ 周评估",
+    },
+    {
+        "id": "bilibili",
+        "name": "B 站专栏",
+        "skill_dir": None,
+        "constraints": None,
+        "status": "planned",
+        "note": "第 9+ 周评估",
+    },
+    {
+        "id": "weibo",
+        "name": "微博",
+        "skill_dir": None,
+        "constraints": None,
+        "status": "planned",
+        "note": "第 9+ 周评估",
+    },
+]
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--json", action="store_true")
+    args = ap.parse_args()
+
+    if args.json:
+        json.dump(TARGETS, sys.stdout, ensure_ascii=False, indent=2)
+        sys.stdout.write("\n")
+        return
+
+    print(f"{'ID':<14} {'NAME':<14} {'STATUS':<10} {'NOTE'}")
+    print("-" * 70)
+    for t in TARGETS:
+        print(f"{t['id']:<14} {t['name']:<14} {t['status']:<10} {t['note']}")
+
+
+if __name__ == "__main__":
+    main()

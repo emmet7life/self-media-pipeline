@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "platform": "xiaohongshu",
+  "updated_at": "2026-06-02",
+  "title": {
+    "min": 6,
+    "max": 20,
+    "require_emoji": true,
+    "min_emoji": 1,
+    "max_emoji": 3
+  },
+  "body": {
+    "min": 100,
+    "max": 1000,
+    "paragraph_max_lines": 3,
+    "min_hashtags": 3,
+    "max_hashtags": 5,
+    "keyword_repeats": [2, 3]
+  },
+  "images": {
+    "cover": {
+      "width_px": 1080,
+      "height_px": 1440,
+      "max_bytes": 5242880
+    },
+    "grid": {
+      "rows": 3,
+      "cols": 3,
+      "count_min": 1,
+      "count_recommended_min": 4,
+      "count_recommended_max": 6,
+      "count_max": 9
+    },
+    "format_supported": ["jpg", "png"],
+    "format_unsupported": ["webp"]
+  },
+  "forbidden": {
+    "external_links": true,
+    "qr_codes": true,
+    "wechat_ids": true,
+    "clickbait_words": ["震惊", "99%的人不知道", "不转不是中国人"]
+  },
+  "image_placeholder_convention": "<img data-xhs-src='...' data-slot='...' />"
+}

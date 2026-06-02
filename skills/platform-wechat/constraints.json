@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "platform": "wechat",
+  "updated_at": "2026-06-02",
+  "word_count": {
+    "title_min": 8,
+    "title_max": 30,
+    "body_min": 600,
+    "body_max": 5000,
+    "body_recommended_min": 800,
+    "body_recommended_max": 1500,
+    "paragraph_max_lines": 5
+  },
+  "structure": {
+    "subtitle_every_chars": [300, 500],
+    "image_every_chars": [600, 1000],
+    "image_format_supported": ["jpg", "png", "gif"],
+    "image_format_unsupported": ["webp"],
+    "image_recommended_width_px": 1080
+  },
+  "css_must_inline": [
+    "color", "background-color", "font-size", "font-weight", "line-height",
+    "text-align", "margin", "padding", "border", "border-radius", "max-width"
+  ],
+  "css_will_be_stripped": [
+    "class-selectors", "media-queries", "css-variables",
+    "position-fixed", "position-sticky", "grid-advanced", "transform-3d"
+  ],
+  "tags_forbidden": ["script", "link[rel=stylesheet]", "meta", "iframe"],
+  "font_reference_forbidden": true,
+  "video_audio_must_use_native_player": true,
+  "image_placeholder_convention": "<img data-wx-src='...' data-slot='...' />"
+}

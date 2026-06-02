@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""
+db —— library SQLite 的 CLI 包装
+
+用法:
+    python tools/db list-articles
+    python tools/db get <article_id>
+    python tools/db search "<query>"
+    python tools/db stats
+"""
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+import library.server as L  # noqa: E402
+
+
+def cmd_list_articles(args: argparse.Namespace) -> None:
+    res = L.tool_list_articles({"limit": args.limit})
+    if not res["articles"]:
+        print("(no articles)")
+        return
+    print(f"{'ID':<5} {'CREATED':<20} TOPIC")
+    print("-" * 70)
+    for a in res["articles"]:
+        print(f"{a['id']:<5} {a['created_at']:<20} {a['topic']}")
+
+
+def cmd_get(args: argparse.Namespace) -> None:
+    res = L.tool_get_article({"article_id": args.article_id})
+    if res.get("error") == "not_found":
+        print(f"article {args.article_id} not found", file=sys.stderr)
+        sys.exit(1)
+    print(f"Article #{res['id']}: {res['topic']}")
+    print(f"  created_at: {res['created_at']}")
+    print(f"  source_material: {res['source_material']}")
+    print(f"  style_reference: {res['style_reference']}")
+    print(f"  drafts ({len(res['drafts'])}):")
+    for d in res['drafts']:
+        print(f"    [{d['id']}] {d['platform']:<12} status={d['status']:<10} title={d['title']}")
+    print(f"  derivatives ({len(res['derivatives'])}):")
+    for dv in res['derivatives']:
+        print(f"    [{dv['id']}] draft_id={dv['draft_id']} kind={dv['kind']:<14} path={dv['file_path']}")
+
+
+def cmd_search(args: argparse.Namespace) -> None:
+    res = L.tool_search_articles({"query": args.query})
+    if not res["matches"]:
+        print("(no matches)")
+        return
+    for m in res["matches"]:
+        print(f"[{m['id']}] {m['topic']}")
+        print(f"    {m['snippet']}")
+
+
+def cmd_stats(args: argparse.Namespace) -> None:
+    # 用 raw SQL
+    import sqlite3
+    conn = sqlite3.connect(str(L.DB_PATH))
+    conn.row_factory = sqlite3.Row
+    for table in ["articles", "drafts", "derivatives", "publish_log"]:
+        n = conn.execute(f"SELECT COUNT(*) AS c FROM {table}").fetchone()["c"]
+        print(f"  {table}: {n}")
+    conn.close()
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="library CLI")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    p1 = sub.add_parser("list-articles")
+    p1.add_argument("--limit", type=int, default=20)
+    p1.set_defaults(func=cmd_list_articles)
+
+    p2 = sub.add_parser("get")
+    p2.add_argument("article_id", type=int)
+    p2.set_defaults(func=cmd_get)
+
+    p3 = sub.add_parser("search")
+    p3.add_argument("query")
+    p3.set_defaults(func=cmd_search)
+
+    p4 = sub.add_parser("stats")
+    p4.set_defaults(func=cmd_stats)
+
+    args = ap.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

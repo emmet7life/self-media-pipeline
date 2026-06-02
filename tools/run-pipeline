@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""
+run-pipeline —— 手动触发一次端到端 pipeline（**调试用**）
+
+本工具是 self-media-pipeline 的"非 LLM 入口"，用来在没有 agent 的情况下
+手工跑一次 pipeline 验证工具链。
+
+真实场景下，orchestrator agent 会:
+    1. 加载 skills/self-media-pipeline/SKILL.md
+    2. spawn writer / reviewer / renderer subagent
+    3. 调 library-mcp 工具入库
+
+本工具只 step through 上述步骤的"骨架版"——主要验证:
+- spec.yaml 写得对
+- library CRUD 通
+- 路径契约对
+
+第 3 周后才会扩展。
+
+用法:
+    python tools/run-pipeline --spec examples/hello-world/spec.json
+"""
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+import library.server as L  # noqa: E402
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--spec", required=True, help="path to spec.json")
+    ap.add_argument("--dry-run", action="store_true", help="don't write to library")
+    args = ap.parse_args()
+
+    spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+    print(f"[step 1/6] parsed spec: {spec['topic']} -> {spec['target_platforms']}")
+
+    if spec.get("source_material"):
+        print(f"[step 2/6] fact-check SKIPPED in stub (no LLM call)")
+
+    drafts = []
+    for platform in spec["target_platforms"]:
+        print(f"[step 3/6] writer({platform}) STUB: no LLM call; would load skills/{platform or 'render-html'}")
+        drafts.append({"platform": platform, "status": "draft"})
+
+    print(f"[step 4/6] reviewer STUB: no LLM call")
+    for d in drafts:
+        d["status"] = "reviewed"
+
+    print(f"[step 5/6] renderer STUB: no chrome call")
+
+    if args.dry_run:
+        print(f"[step 6/6] library insert SKIPPED (dry-run)")
+        return
+
+    aid = L.tool_insert_article({
+        "topic": spec["topic"],
+        "source_material": spec.get("source_material"),
+        "style_reference": spec.get("style_reference"),
+        "spec_yaml": json.dumps(spec, ensure_ascii=False),
+    })
+    print(f"[step 6/6] inserted article id={aid['article_id']}")
+
+    for d in drafts:
+        did = L.tool_insert_draft({
+            "article_id": aid["article_id"],
+            "platform": d["platform"],
+            "status": d["status"],
+            "title": f"[STUB] {spec['topic']} ({d['platform']})",
+            "body_markdown": f"# {spec['topic']}\n\nSTUB body for {d['platform']}.",
+        })
+        print(f"   - inserted draft id={did['draft_id']} platform={d['platform']}")
+
+
+if __name__ == "__main__":
+    main()

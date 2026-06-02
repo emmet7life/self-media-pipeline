@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""
+draft-spec —— 把"用户的自然语言输入"解析成机器可读的 spec.yaml
+
+本工具是 self-media-pipeline Step 1 的 CLI 版。
+它本身**不**调 LLM——只做简单的关键字解析。
+真实场景下，orchestrator agent 加载 self-media-pipeline/SKILL.md 后，
+自己用 LLM 解析用户输入到 spec.yaml；本工具给"非 LLM 场景"和"调试"用。
+
+用法:
+    python tools/draft-spec --topic "AI Agent 入门" --platforms wechat,xiaohongshu
+    python tools/draft-spec --topic "..." --platforms wechat --word-count 800 --source https://...
+"""
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+# 平台硬性约束（镜像 constraints.json，避免重复读文件）
+PLATFORM_DEFAULTS = {
+    "wechat": {
+        "max_chars": 5000,
+        "inline_css_only": True,
+    },
+    "xiaohongshu": {
+        "max_chars": 1000,
+        "grid": "3x3",
+        "cover_size": "1080x1440",
+    },
+}
+
+
+def build_spec(args: argparse.Namespace) -> dict:
+    platforms = [p.strip() for p in args.platforms.split(",") if p.strip()]
+    unknown = [p for p in platforms if p not in PLATFORM_DEFAULTS]
+    if unknown:
+        print(f"ERROR: unknown platform(s): {unknown}; supported: {list(PLATFORM_DEFAULTS.keys())}", file=sys.stderr)
+        sys.exit(1)
+
+    spec = {
+        "topic": args.topic,
+        "target_platforms": platforms,
+        "source_material": args.source,
+        "style_reference": args.style_reference,
+        "word_count_target": args.word_count,
+        "constraints": {p: PLATFORM_DEFAULTS[p] for p in platforms},
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    return spec
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Generate pipeline spec from user input")
+    ap.add_argument("--topic", required=True)
+    ap.add_argument("--platforms", default="wechat,xiaohongshu", help="comma-separated")
+    ap.add_argument("--source", help="source material (URL or path)")
+    ap.add_argument("--style-reference", help="style reference article id or description")
+    ap.add_argument("--word-count", type=int, help="target word count")
+    ap.add_argument("--out", help="output path; default stdout; if dir, auto-name with timestamp")
+    args = ap.parse_args()
+
+    spec = build_spec(args)
+    yaml_text = json.dumps(spec, ensure_ascii=False, indent=2)  # 暂用 JSON, YAML 库第 1-2 周不引
+
+    if args.out:
+        out = Path(args.out)
+        # 情况 1: --out 是目录 → 在目录下生成带时间戳的文件
+        if out.is_dir():
+            ts = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+            out = out / f"spec-{ts}.json"
+        # 情况 2: --out 是文件路径（不一定存在）→ 写入该路径
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(yaml_text, encoding="utf-8")
+        print(f"wrote {out}", file=sys.stderr)
+    else:
+        print(yaml_text)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,27 @@
+# database
+library/data/*.db
+library/data/*.db-shm
+library/data/*.db-wal
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# output
+output/
+dist/
+build/
+*.egg-info/
+
+# local config
+.env
+.env.local
+secrets.yaml
